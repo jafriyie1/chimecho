@@ -7,14 +7,20 @@ use roux::Subreddit;
 #[derive(Debug, Clone)]
 pub struct RedditPost<'a> {
     pub url_domain: &'a str,
-    full_url: String, 
+    full_url: String,
     subreddit: String,
     score: f64,
     title: String,
 }
 
 impl RedditPost<'_> {
-    pub fn new(url_domain: &str, full_url: String, subreddit: String, score: f64, title: String) -> RedditPost {
+    pub fn new(
+        url_domain: &str,
+        full_url: String,
+        subreddit: String,
+        score: f64,
+        title: String,
+    ) -> RedditPost {
         RedditPost {
             url_domain,
             full_url,

@@ -1,10 +1,10 @@
-pub mod google_drive; 
-pub mod mediafire; 
-pub mod dropbox; 
+pub mod dropbox;
+pub mod google_drive;
+pub mod mediafire;
 
-use crate::GoogleDriveMetadata; 
-use crate::DropboxMetadata; 
-use crate::MediaFireMetadata; 
+use crate::DropboxMetadata;
+use crate::GoogleDriveMetadata;
+use crate::MediaFireMetadata;
 
 pub trait DownloadFiles<T> {
     fn download(self, resp: T);
@@ -14,7 +14,7 @@ pub trait DownloadFiles<T> {
 pub enum DownloadOptions {
     GoogleDrive(GoogleDriveMetadata),
     Dropbox(DropboxMetadata),
-    Mediafire(MediaFireMetadata)
+    Mediafire(MediaFireMetadata),
 }
 
 #[derive(Debug)]

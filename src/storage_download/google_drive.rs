@@ -1,33 +1,32 @@
-use std::io::Write;
-use std::path::Path;
-use std::fs;
-use tokio;
 use google_drive3::api::Scope;
 use google_drive3::api::{File, FileList};
+use google_drive3::hyper::body::to_bytes;
 use google_drive3::hyper::Body;
 use google_drive3::hyper::Response;
-use google_drive3::hyper::body::to_bytes;
 use google_drive3::{hyper, hyper_rustls, oauth2, DriveHub, Error};
 use lazy_static::lazy_static;
 use regex::Regex;
-use zip::write::FileOptions;
-use yup_oauth2;
 use std::env;
+use std::fs;
+use std::io::Write;
+use std::path::Path;
+use tokio;
+use yup_oauth2;
+use zip::write::FileOptions;
 
 use crate::DownloadFiles;
 
 #[derive(Debug)]
-pub struct GoogleFolder { 
-    file_id: String, 
-    file_name: String
+pub struct GoogleFolder {
+    file_id: String,
+    file_name: String,
 }
 
 #[derive(Debug)]
-pub struct GoogleFile { 
-    file_id: String, 
-    file_name: String
+pub struct GoogleFile {
+    file_id: String,
+    file_name: String,
 }
-
 
 #[derive(Debug)]
 pub enum GoogleFileType {
@@ -39,9 +38,8 @@ pub enum GoogleFileType {
 pub struct GoogleDriveMetadata {
     id: String,
     url: String,
-    pub file_metadata: Option<GoogleFileType>
+    pub file_metadata: Option<GoogleFileType>,
 }
-
 
 #[tokio::main]
 pub async fn get_google_drive_connector() -> Result<DriveHub, Error> {
@@ -92,8 +90,6 @@ impl GoogleDriveMetadata {
         } else {
             "other"
         }
-
-        
     }
 
     #[tokio::main]
@@ -101,23 +97,23 @@ impl GoogleDriveMetadata {
         folder_id: &str,
         hub: &DriveHub,
     ) -> Result<(Response<Body>, FileList), Error> {
-
-        // recurse on result 
-        // if result is not a folder 
-        // add to list 
-        let result = hub.files()
-                        .list()
-                        .supports_all_drives(true)
-                        .include_items_from_all_drives(true)
-                        .q(&format!("'{}' in parents", folder_id))
-                        .doit().await;
+        // recurse on result
+        // if result is not a folder
+        // add to list
+        let result = hub
+            .files()
+            .list()
+            .supports_all_drives(true)
+            .include_items_from_all_drives(true)
+            .q(&format!("'{}' in parents", folder_id))
+            .doit()
+            .await;
 
         result
     }
 
     #[tokio::main]
     pub async fn download_file(self, hub: &DriveHub) {
-        
         let file = hub
             .files()
             .get(self.id.as_str())
@@ -132,8 +128,9 @@ impl GoogleDriveMetadata {
 
         tokio::task::spawn_blocking(|| {
             GoogleDriveMetadata::download(self, file);
-        }).await.expect("Task panicked")
-        
+        })
+        .await
+        .expect("Task panicked")
     }
 
     fn get_id(url: &str) -> String {
@@ -170,25 +167,23 @@ impl GoogleDriveMetadata {
         let file_type = GoogleDriveMetadata::file_or_folder(url);
         let file_id = GoogleDriveMetadata::get_id(url);
 
-        let file_metadata = match file_type { 
-            "file" => Some(GoogleFileType::GoogleFile(GoogleFile{
-                file_id: file_id.clone(), 
+        let file_metadata = match file_type {
+            "file" => Some(GoogleFileType::GoogleFile(GoogleFile {
+                file_id: file_id.clone(),
                 file_name: title,
             })),
-            "folder" => Some(GoogleFileType::GoogleFolder(GoogleFolder{
-                file_id: file_id.clone(), 
-                file_name: title
+            "folder" => Some(GoogleFileType::GoogleFolder(GoogleFolder {
+                file_id: file_id.clone(),
+                file_name: title,
             })),
-            _ => None
+            _ => None,
         };
-    
-        GoogleDriveMetadata{
+
+        GoogleDriveMetadata {
             id: file_id,
             url: url.to_string(),
-            file_metadata
+            file_metadata,
         }
-
-        
     }
 }
 
@@ -196,48 +191,46 @@ impl DownloadFiles<Result<(Response<Body>, File), Error>> for GoogleDriveMetadat
     #[tokio::main]
     async fn download(self, resp: Result<(Response<Body>, File), Error>) {
         let data_resp = match resp {
-            Ok(val) => Some(val), 
-            Err(_) => None
+            Ok(val) => Some(val),
+            Err(_) => None,
         };
-        
+
         if let Some((resp, google_file)) = data_resp {
             let path_str = match &google_file.name {
-                Some(val) => format!("{}.zip",val),
-                None => format!("{}.zip",self.id)
+                Some(val) => format!("{}.zip", val),
+                None => format!("{}.zip", self.id),
             };
             let path = Path::new(&path_str);
             let display = path.display();
             let file = match fs::File::create(&path) {
                 Ok(file) => file,
-                Err(e) => panic!("couldn't open {}: {}", display, e), 
-                
+                Err(e) => panic!("couldn't open {}: {}", display, e),
             };
 
             let mut zip = zip::ZipWriter::new(file);
-            
-            let options = FileOptions::default()
-                .compression_method(zip::CompressionMethod::Stored); 
-             
+
+            let options = FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+
             let new_response = to_bytes(resp.into_body()).await.unwrap();
-            
+
             zip.start_file(&path_str, options).unwrap();
             zip.write_all(&new_response).unwrap();
             zip.finish().unwrap();
-            
-
         }
     }
 }
 
 #[cfg(test)]
-mod tests{
-    use super::*; 
+mod tests {
+    use super::*;
 
     #[test]
     fn test_file_or_folder() {
-        let test_one_url = "https://drive.google.com/drive/folders/1Ny62TwY-Rgz4cfQDwcdBHL0vtWJgy6DI";
+        let test_one_url =
+            "https://drive.google.com/drive/folders/1Ny62TwY-Rgz4cfQDwcdBHL0vtWJgy6DI";
         let test_two_url = "https://drive.google.com/file/d/1-cgL6_YlB8gOVgoLrwCnP19OqHt34WVj/view";
-        let test_three_url = "https://www.dropbox.com/sh/hkgtorveen2jvh6/AAAf0TStSQD_9PAOTjubPU1Ma?dl=0"; 
+        let test_three_url =
+            "https://www.dropbox.com/sh/hkgtorveen2jvh6/AAAf0TStSQD_9PAOTjubPU1Ma?dl=0";
 
         assert_eq!("folder", GoogleDriveMetadata::file_or_folder(test_one_url));
         assert_eq!("file", GoogleDriveMetadata::file_or_folder(test_two_url));
@@ -246,17 +239,29 @@ mod tests{
 
     #[test]
     fn test_get_id() {
-        let test_one_url = "https://drive.google.com/drive/folders/1Ny62TwY-Rgz4cfQDwcdBHL0vtWJgy6DI";
+        let test_one_url =
+            "https://drive.google.com/drive/folders/1Ny62TwY-Rgz4cfQDwcdBHL0vtWJgy6DI";
         let test_two_url = "https://drive.google.com/file/d/1-cgL6_YlB8gOVgoLrwCnP19OqHt34WVj/view";
-        let test_three_url = "https://drive.google.com/file/d/1K4fCarvyqHrkE08H-b2B-fgaOwMRlSkJ/view"; 
-        let test_four_url = "https://drive.google.com/file/d/1fkzvvlllNowwuZOdlAc0A05p5sZvnsuv/view";
+        let test_three_url =
+            "https://drive.google.com/file/d/1K4fCarvyqHrkE08H-b2B-fgaOwMRlSkJ/view";
+        let test_four_url =
+            "https://drive.google.com/file/d/1fkzvvlllNowwuZOdlAc0A05p5sZvnsuv/view";
 
-        assert_eq!("1Ny62TwY-Rgz4cfQDwcdBHL0vtWJgy6DI", GoogleDriveMetadata::get_id(test_one_url));
-        assert_eq!("1-cgL6_YlB8gOVgoLrwCnP19OqHt34WVj", GoogleDriveMetadata::get_id(test_two_url));
-        assert_eq!("1K4fCarvyqHrkE08H-b2B-fgaOwMRlSkJ", GoogleDriveMetadata::get_id(test_three_url));
-        assert_eq!("1fkzvvlllNowwuZOdlAc0A05p5sZvnsuv", GoogleDriveMetadata::get_id(test_four_url));
-
+        assert_eq!(
+            "1Ny62TwY-Rgz4cfQDwcdBHL0vtWJgy6DI",
+            GoogleDriveMetadata::get_id(test_one_url)
+        );
+        assert_eq!(
+            "1-cgL6_YlB8gOVgoLrwCnP19OqHt34WVj",
+            GoogleDriveMetadata::get_id(test_two_url)
+        );
+        assert_eq!(
+            "1K4fCarvyqHrkE08H-b2B-fgaOwMRlSkJ",
+            GoogleDriveMetadata::get_id(test_three_url)
+        );
+        assert_eq!(
+            "1fkzvvlllNowwuZOdlAc0A05p5sZvnsuv",
+            GoogleDriveMetadata::get_id(test_four_url)
+        );
     }
-
-
 }

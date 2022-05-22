@@ -5,6 +5,7 @@ history.txt
 tests/fixtures/nuplayground
 crates/*/target
 .mailmap
+/data
 
 # Debian/Ubuntu
 debian/.debhelper/

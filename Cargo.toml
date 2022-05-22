@@ -13,3 +13,8 @@ lazy_static = "1.4.0"
 google-drive3 = "3.1.0"
 rustls-native-certs = "0.6.2"
 yup-oauth2 = "6.6.0"
+reqwest = "0.11.10"
+zip = "0.6.2"
+soup = "0.5"
+serde = { version = "1.0.137", features = ["derive"] }
+serde_json = "1.0"

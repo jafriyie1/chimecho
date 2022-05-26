@@ -108,7 +108,6 @@ impl DropboxMetadata {
             .post(endpoint)
             .header(AUTHORIZATION, token)
             .header("Dropbox-API-Arg", &json_val)
-            .json(&json_val)
             .send()
             .await
             .unwrap();

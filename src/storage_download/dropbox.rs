@@ -72,10 +72,11 @@ pub struct DropboxDownloadResponse {
 pub struct DropboxMetadata {
     file_name: String,
     url: String,
+    file_path: String
 }
 
 impl DropboxMetadata {
-    pub fn new(url: String, file_name: String) -> DropboxMetadata {
+    pub fn new(url: String, file_name: String, file_path: String) -> DropboxMetadata {
         // hack for now
         // roux on url adds amp; and %5C
         // on decoding on string from
@@ -92,6 +93,7 @@ impl DropboxMetadata {
         DropboxMetadata {
             url: new_url,
             file_name: new_file_name,
+            file_path
         }
     }
 
@@ -124,7 +126,7 @@ impl DropboxMetadata {
 impl DownloadFiles<Option<String>> for DropboxMetadata {
     #[tokio::main]
     async fn download(self, _resp: Option<String>) {
-        let file_name = format!("{}.zip", &self.file_name);
+        let file_name = format!("{}/{}.zip", &self.file_path, &self.file_name);
         let path = Path::new(&file_name);
         let file = match fs::File::create(path) {
             Ok(val) => val,

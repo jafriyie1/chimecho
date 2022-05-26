@@ -39,6 +39,7 @@ pub struct GoogleDriveMetadata {
     id: String,
     url: String,
     pub file_metadata: Option<GoogleFileType>,
+    file_path: String
 }
 
 #[tokio::main]
@@ -163,7 +164,7 @@ impl GoogleDriveMetadata {
         id.to_string()
     }
 
-    pub fn new(url: &str, title: String) -> GoogleDriveMetadata {
+    pub fn new(url: &str, title: String, file_path: String) -> GoogleDriveMetadata {
         let file_type = GoogleDriveMetadata::file_or_folder(url);
         let file_id = GoogleDriveMetadata::get_id(url);
 
@@ -183,6 +184,7 @@ impl GoogleDriveMetadata {
             id: file_id,
             url: url.to_string(),
             file_metadata,
+            file_path 
         }
     }
 }
@@ -198,7 +200,7 @@ impl DownloadFiles<Result<(Response<Body>, File), Error>> for GoogleDriveMetadat
         if let Some((resp, google_file)) = data_resp {
             let path_str = match &google_file.name {
                 Some(val) => format!("{}.zip", val),
-                None => format!("{}.zip", self.id),
+                None => format!("{}/{}.zip", &self.file_path, self.id),
             };
             let path = Path::new(&path_str);
             let display = path.display();

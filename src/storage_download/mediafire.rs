@@ -13,12 +13,13 @@ use crate::DownloadFiles;
 pub struct MediaFireMetadata {
     url: String,
     raw_html: String,
+    file_path: String,
 }
 
 impl MediaFireMetadata {
-    pub fn new(url: String) -> MediaFireMetadata {
+    pub fn new(url: String, file_path: String) -> MediaFireMetadata {
         let raw_html = MediaFireMetadata::set_html(&url);
-        MediaFireMetadata { url, raw_html }
+        MediaFireMetadata { url, raw_html, file_path }
     }
 
     #[tokio::main]
@@ -75,7 +76,7 @@ impl DownloadFiles<Option<String>> for MediaFireMetadata {
     #[tokio::main]
     async fn download(self, _resp: Option<String>) {
         let resp_download_url = self.get_download_url();
-        let file_name = self.get_file_name().unwrap();
+        let file_name = format!("{}/{}", &self.file_path, self.get_file_name().unwrap());
 
         if let Some(download_url) = resp_download_url {
             let path_str = &file_name;

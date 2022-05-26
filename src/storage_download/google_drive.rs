@@ -148,7 +148,9 @@ impl GoogleDriveMetadata {
                     .unwrap();
             static ref RE_FOUR: Regex =
                 Regex::new("https://drive.google.com/file/d/([a-zA-z0-9-]+)/view").unwrap();
-            static ref REGEXS: Vec<&'static Regex> = vec![&RE, &RE_TWO, &RE_THREE, &RE_FOUR];
+            static ref RE_FIVE: Regex =
+                Regex::new("https://drive.google.com/drive/u/[0-9]/folders/([a-zA-z0-9-]+)").unwrap();
+            static ref REGEXS: Vec<&'static Regex> = vec![&RE, &RE_TWO, &RE_THREE, &RE_FOUR, &RE_FIVE];
         }
 
         // set to first regex
@@ -159,6 +161,7 @@ impl GoogleDriveMetadata {
             }
         }
 
+        println!("{:?}", url);
         let captured = use_re.captures(url).unwrap();
         let id = captured.get(1).map_or("", |m| m.as_str());
         id.to_string()
@@ -233,6 +236,8 @@ mod tests {
         let test_two_url = "https://drive.google.com/file/d/1-cgL6_YlB8gOVgoLrwCnP19OqHt34WVj/view";
         let test_three_url =
             "https://www.dropbox.com/sh/hkgtorveen2jvh6/AAAf0TStSQD_9PAOTjubPU1Ma?dl=0";
+        let test_four_url = 
+            "https://drive.google.com/drive/u/4/folders/1Xw-HoupNY75aYB1Hc0zLifFxu3g5RQGX";
 
         assert_eq!("folder", GoogleDriveMetadata::file_or_folder(test_one_url));
         assert_eq!("file", GoogleDriveMetadata::file_or_folder(test_two_url));

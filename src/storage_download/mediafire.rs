@@ -48,26 +48,34 @@ impl MediaFireMetadata {
     fn get_file_name(&self) -> Option<String> {
         let soup = Soup::new(&self.raw_html);
 
-        let file_name = soup
+        let find_file_name = soup
             .tag("div")
             .attr("class", "filename")
-            .find()
-            .unwrap()
-            .text();
+            .find();
 
-        Some(file_name)
+
+        let file_name = match find_file_name {
+            Some(val) => Some(val.text()), 
+            None => None
+        };
+
+        file_name
     }
 
     fn get_download_url(&self) -> Option<String> {
         let soup = Soup::new(&self.raw_html);
 
-        let download_url = soup
+        let find_url = soup
             .tag("a")
             .attr("class", "popsok")
-            .find()
-            .unwrap()
-            .get("href");
+            .find();
 
+        let download_url = match find_url {
+            Some(val) => val.get("href"), 
+            None => None
+        };
+        
+            
         download_url
     }
 }
@@ -76,10 +84,12 @@ impl DownloadFiles<Option<String>> for MediaFireMetadata {
     #[tokio::main]
     async fn download(self, _resp: Option<String>) {
         let resp_download_url = self.get_download_url();
-        let file_name = format!("{}/{}", &self.file_path, self.get_file_name().unwrap());
+        let resp_file_name = self.get_file_name();
 
-        if let Some(download_url) = resp_download_url {
+        if let (Some(download_url), Some(original_file_name)) = (resp_download_url, resp_file_name) {
+            let file_name = format!("{}/{}", &self.file_path, original_file_name);
             let path_str = &file_name;
+            
             let path = Path::new(path_str);
             let file = match fs::File::create(&path) {
                 Ok(file) => file,

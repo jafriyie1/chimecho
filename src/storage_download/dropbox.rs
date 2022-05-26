@@ -96,7 +96,8 @@ impl DropboxMetadata {
             file_path
         }
     }
-
+    // leaving code here in case you want to use this function in the future 
+    /* 
     #[tokio::main]
     async fn get_download_url_and_file(&self) -> (Option<String>, Option<String>) {
         let client = reqwest::Client::builder().build().unwrap();
@@ -120,6 +121,7 @@ impl DropboxMetadata {
 
         (download_url, file_name)
     }
+    */
 }
 
 impl DownloadFiles<Option<String>> for DropboxMetadata {

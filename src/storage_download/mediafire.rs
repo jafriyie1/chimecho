@@ -19,7 +19,11 @@ pub struct MediaFireMetadata {
 impl MediaFireMetadata {
     pub fn new(url: String, file_path: String) -> MediaFireMetadata {
         let raw_html = MediaFireMetadata::set_html(&url);
-        MediaFireMetadata { url, raw_html, file_path }
+        MediaFireMetadata {
+            url,
+            raw_html,
+            file_path,
+        }
     }
 
     #[tokio::main]
@@ -48,15 +52,11 @@ impl MediaFireMetadata {
     fn get_file_name(&self) -> Option<String> {
         let soup = Soup::new(&self.raw_html);
 
-        let find_file_name = soup
-            .tag("div")
-            .attr("class", "filename")
-            .find();
-
+        let find_file_name = soup.tag("div").attr("class", "filename").find();
 
         let file_name = match find_file_name {
-            Some(val) => Some(val.text()), 
-            None => None
+            Some(val) => Some(val.text()),
+            None => None,
         };
 
         file_name
@@ -65,17 +65,13 @@ impl MediaFireMetadata {
     fn get_download_url(&self) -> Option<String> {
         let soup = Soup::new(&self.raw_html);
 
-        let find_url = soup
-            .tag("a")
-            .attr("class", "popsok")
-            .find();
+        let find_url = soup.tag("a").attr("class", "popsok").find();
 
         let download_url = match find_url {
-            Some(val) => val.get("href"), 
-            None => None
+            Some(val) => val.get("href"),
+            None => None,
         };
-        
-            
+
         download_url
     }
 }
@@ -86,12 +82,13 @@ impl DownloadFiles<Option<String>> for MediaFireMetadata {
         let resp_download_url = self.get_download_url();
         let resp_file_name = self.get_file_name();
 
-        if let (Some(download_url), Some(original_file_name)) = (resp_download_url, resp_file_name) {
-            let file_name = format!("{}/{}", &self.file_path, original_file_name);
+        if let (Some(download_url), Some(original_file_name)) = (resp_download_url, resp_file_name)
+        {
+            let file_name = format!("{}/{}", &self.file_path, &original_file_name);
             let path_str = &file_name;
-            
+
             let path = Path::new(path_str);
-            let file = match fs::File::create(&path) {
+            let file = match fs::File::create(original_file_name) {
                 Ok(file) => file,
                 Err(e) => panic!("Couldn't open {}", e),
             };

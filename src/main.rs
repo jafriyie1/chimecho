@@ -11,10 +11,14 @@ use storage_download::google_drive::GoogleFileType;
 use storage_download::mediafire::MediaFireMetadata;
 use storage_download::{AssocDataForDownload, DownloadFiles, DownloadOptions};
 
-use serde_json;
 use clap::Parser;
+use serde_json;
 
-#[clap(author = "Joel Afriyie", version = "0.1.0", about = "Program used to get music sample data from Reddit")]
+#[clap(
+    author = "Joel Afriyie",
+    version = "0.1.0",
+    about = "Program used to get music sample data from Reddit"
+)]
 /// Program used to get music sample data from Reddit
 #[derive(Parser, Default, Debug)]
 pub struct CLI {
@@ -22,11 +26,11 @@ pub struct CLI {
     #[clap(short, long)]
     q: Option<String>,
     /// Optional time period. Example: after=7d
-    #[clap(short, long)] 
-    time_period: Option<String>,  
-    /// Number of steps to iterate over posts list 
     #[clap(short, long)]
-    step_size: Option<usize>, 
+    time_period: Option<String>,
+    /// Number of steps to iterate over posts list
+    #[clap(short, long)]
+    step_size: Option<usize>,
     /// File path folder for the music data to live in
     #[clap(short, long)]
     file_path: String,
@@ -44,8 +48,8 @@ fn main() {
     };
 
     let step_size = match args.step_size {
-        Some(val) => val, 
-        None => 1
+        Some(val) => val,
+        None => 1,
     };
 
     let vec_basic_list: RequestSubmissionResponse = serde_json::from_str(&response).unwrap();
@@ -75,15 +79,14 @@ fn main() {
                     download: DownloadOptions::GoogleDrive(GoogleDriveMetadata::new(
                         post.get_full_url().as_str(),
                         post.get_title(),
-                        args.file_path.clone()
-
+                        args.file_path.clone(),
                     )),
                     website_metadata: post,
                 }),
                 "mediafire.com" => Some(AssocDataForDownload {
                     download: DownloadOptions::Mediafire(MediaFireMetadata::new(
                         post.get_full_url(),
-                        args.file_path.clone()
+                        args.file_path.clone(),
                     )),
                     website_metadata: post,
                 }),
@@ -91,7 +94,7 @@ fn main() {
                     download: DownloadOptions::Dropbox(DropboxMetadata::new(
                         post.get_full_url(),
                         post.get_title(),
-                        args.file_path.clone()
+                        args.file_path.clone(),
                     )),
                     website_metadata: post,
                 }),

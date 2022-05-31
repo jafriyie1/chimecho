@@ -72,7 +72,7 @@ pub struct DropboxDownloadResponse {
 pub struct DropboxMetadata {
     file_name: String,
     url: String,
-    file_path: String
+    file_path: String,
 }
 
 impl DropboxMetadata {
@@ -93,11 +93,11 @@ impl DropboxMetadata {
         DropboxMetadata {
             url: new_url,
             file_name: new_file_name,
-            file_path
+            file_path,
         }
     }
-    // leaving code here in case you want to use this function in the future 
-    /* 
+    // leaving code here in case you want to use this function in the future
+    /*
     #[tokio::main]
     async fn get_download_url_and_file(&self) -> (Option<String>, Option<String>) {
         let client = reqwest::Client::builder().build().unwrap();
@@ -127,8 +127,8 @@ impl DropboxMetadata {
 impl DownloadFiles<Option<String>> for DropboxMetadata {
     #[tokio::main]
     async fn download(self, _resp: Option<String>) {
-        let file_name = format!("{}/{}.zip", &self.file_path, &self.file_name);
-        let path = Path::new(&file_name);
+        let full_file_path = format!("{}/{}.zip", &self.file_path, &self.file_name);
+        let path = Path::new(&self.file_name);
         let file = match fs::File::create(path) {
             Ok(val) => val,
             Err(e) => panic!("Couldn't open the file: {}", e),
@@ -144,7 +144,7 @@ impl DownloadFiles<Option<String>> for DropboxMetadata {
         let mut zip = zip::ZipWriter::new(file);
         let options = FileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
-        zip.start_file(&file_name, options).unwrap();
+        zip.start_file(&full_file_path, options).unwrap();
         zip.write_all(&resp).unwrap();
         zip.finish().unwrap();
     }

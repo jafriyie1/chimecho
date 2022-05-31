@@ -39,7 +39,7 @@ pub struct GoogleDriveMetadata {
     id: String,
     url: String,
     pub file_metadata: Option<GoogleFileType>,
-    file_path: String
+    file_path: String,
 }
 
 #[tokio::main]
@@ -149,8 +149,10 @@ impl GoogleDriveMetadata {
             static ref RE_FOUR: Regex =
                 Regex::new("https://drive.google.com/file/d/([a-zA-z0-9-]+)/view").unwrap();
             static ref RE_FIVE: Regex =
-                Regex::new("https://drive.google.com/drive/u/[0-9]/folders/([a-zA-z0-9-]+)").unwrap();
-            static ref REGEXS: Vec<&'static Regex> = vec![&RE, &RE_TWO, &RE_THREE, &RE_FOUR, &RE_FIVE];
+                Regex::new("https://drive.google.com/drive/u/[0-9]/folders/([a-zA-z0-9-]+)")
+                    .unwrap();
+            static ref REGEXS: Vec<&'static Regex> =
+                vec![&RE, &RE_TWO, &RE_THREE, &RE_FOUR, &RE_FIVE];
         }
 
         // set to first regex
@@ -187,7 +189,7 @@ impl GoogleDriveMetadata {
             id: file_id,
             url: url.to_string(),
             file_metadata,
-            file_path 
+            file_path,
         }
     }
 }
@@ -203,11 +205,11 @@ impl DownloadFiles<Result<(Response<Body>, File), Error>> for GoogleDriveMetadat
         if let Some((resp, google_file)) = data_resp {
             let path_str = match &google_file.name {
                 Some(val) => format!("{}.zip", val),
-                None => format!("{}/{}.zip", &self.file_path, self.id),
+                None => format!("{}/{}.zip", &self.file_path, &self.id),
             };
             let path = Path::new(&path_str);
             let display = path.display();
-            let file = match fs::File::create(&path) {
+            let file = match fs::File::create(&format!("{}.zip", self.id)) {
                 Ok(file) => file,
                 Err(e) => panic!("couldn't open {}: {}", display, e),
             };
@@ -236,7 +238,7 @@ mod tests {
         let test_two_url = "https://drive.google.com/file/d/1-cgL6_YlB8gOVgoLrwCnP19OqHt34WVj/view";
         let test_three_url =
             "https://www.dropbox.com/sh/hkgtorveen2jvh6/AAAf0TStSQD_9PAOTjubPU1Ma?dl=0";
-        let test_four_url = 
+        let test_four_url =
             "https://drive.google.com/drive/u/4/folders/1Xw-HoupNY75aYB1Hc0zLifFxu3g5RQGX";
 
         assert_eq!("folder", GoogleDriveMetadata::file_or_folder(test_one_url));

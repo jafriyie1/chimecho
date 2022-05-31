@@ -1,3 +1,4 @@
+pub mod download_utils;
 pub mod dropbox;
 pub mod google_drive;
 pub mod mediafire;

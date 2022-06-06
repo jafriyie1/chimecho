@@ -86,7 +86,7 @@ mod tests {
 
     #[test]
     fn test_get_files() {
-        let folder_path_one = "/Users/Joel/Desktop/test_samples";
+        let folder_path_one = "./test_samples";
         let mut vec_list = vec![
             "test/Billie Eilish_Bad Guy (Snap).wav".to_string(),
             "test/Full Kit Link.txt".to_string(),

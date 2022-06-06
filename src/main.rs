@@ -4,6 +4,7 @@ mod storage_download;
 use source::reddit;
 use source::reddit::{RedditPost, RequestSubmissionResponse};
 
+use storage_download::download_utils;
 use storage_download::dropbox::DropboxMetadata;
 use storage_download::google_drive::get_google_drive_connector;
 use storage_download::google_drive::GoogleDriveMetadata;
@@ -113,4 +114,6 @@ fn main() {
             DownloadOptions::Mediafire(val) => val.download(None),
         }
     }
+    let get_all_sample_path = download_utils::get_files(&args.file_path.clone());
+    println!("Got all of the files {:?}", get_all_sample_path);
 }

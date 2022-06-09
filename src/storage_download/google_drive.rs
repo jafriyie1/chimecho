@@ -204,19 +204,21 @@ impl DownloadFiles<Result<(Response<Body>, File), Error>> for GoogleDriveMetadat
 
         if let Some((resp, google_file)) = data_resp {
             let path_str = match &google_file.name {
-                Some(val) => format!("{}.zip", val),
+                Some(val) => format!("{}/{}.zip", &self.file_path, val),
                 None => format!("{}/{}.zip", &self.file_path, &self.id),
             };
             let path = Path::new(&path_str);
             let display = path.display();
-            let file = match fs::File::create(&format!("{}.zip", self.id)) {
+            let file = match fs::File::create(&self.id) {
                 Ok(file) => file,
                 Err(e) => panic!("couldn't open {}: {}", display, e),
             };
 
+            println!("Here is the file path google: {}", &path_str);
+
             let mut zip = zip::ZipWriter::new(file);
 
-            let options = FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+            let options = FileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
 
             let new_response = to_bytes(resp.into_body()).await.unwrap();
 

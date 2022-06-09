@@ -127,8 +127,10 @@ impl DropboxMetadata {
 impl DownloadFiles<Option<String>> for DropboxMetadata {
     #[tokio::main]
     async fn download(self, _resp: Option<String>) {
-        let full_file_path = format!("{}/{}.zip", &self.file_path, &self.file_name);
-        let path = Path::new(&self.file_name);
+        let new_file_name = self.file_name.clone().replace("/", "_");
+        let full_file_path = format!("{}/{}.zip", &self.file_path, new_file_name);
+        println!("here is the path in dropbox: {}", &full_file_path);
+        let path = Path::new(&full_file_path);
         let file = match fs::File::create(path) {
             Ok(val) => val,
             Err(e) => panic!("Couldn't open the file: {}", e),
@@ -142,7 +144,7 @@ impl DownloadFiles<Option<String>> for DropboxMetadata {
             .unwrap();
 
         let mut zip = zip::ZipWriter::new(file);
-        let options = FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+        let options = FileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
 
         zip.start_file(&full_file_path, options).unwrap();
         zip.write_all(&resp).unwrap();

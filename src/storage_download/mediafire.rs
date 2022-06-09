@@ -94,7 +94,7 @@ impl DownloadFiles<Option<String>> for MediaFireMetadata {
             };
 
             let mut zip = zip::ZipWriter::new(file);
-            let options = FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+            let options = FileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
 
             let resp_content = reqwest::get(&download_url)
                 .await

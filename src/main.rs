@@ -52,6 +52,7 @@ fn main() {
         Some(val) => val,
         None => 1,
     };
+    println!("yooo here is the file path: {}", &args.file_path);
 
     let vec_basic_list: RequestSubmissionResponse = serde_json::from_str(&response).unwrap();
     let vec_basic_list = vec_basic_list.items;

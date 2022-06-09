@@ -6,6 +6,7 @@ tests/fixtures/nuplayground
 crates/*/target
 .mailmap
 /data
+*.zip
 
 # Debian/Ubuntu
 debian/.debhelper/
@@ -25,3 +26,4 @@ debian/nu/
 
 # Helix configuration folder
 .helix
+

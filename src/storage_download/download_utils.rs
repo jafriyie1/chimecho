@@ -1,7 +1,6 @@
 use std::fs;
-use std::fs::metadata;
-use std::fs::File;
 use std::path::Path;
+use std::process::Command;
 use zip;
 
 pub fn get_files(folder_path: &str) -> Vec<String> {
@@ -16,6 +15,7 @@ pub fn get_files(folder_path: &str) -> Vec<String> {
     };
 
     let mut files_in_zip = Vec::new();
+    let mut rar_files: Vec<String> = Vec::new();
 
     for path in file_paths {
         let temp_file_path = &path.unwrap().path().display().to_string();
@@ -23,16 +23,18 @@ pub fn get_files(folder_path: &str) -> Vec<String> {
         let temp_path = Path::new(&temp_file_path);
         println!("{:?}", temp_path);
         let read_file = fs::File::open(temp_path).unwrap();
-        let zip_archive = match zip::ZipArchive::new(read_file) {
-            Ok(val) => Some(val),
-            Err(_) => None,
-        };
-        //let file_names: Vec<&str> = zip::ZipArchive::file_names(zip_archive).collect();
-
-        files_in_zip.push(zip_archive);
+        if temp_file_path.contains(".zip") {
+            let zip_archive = match zip::ZipArchive::new(read_file) {
+                Ok(val) => Some(val),
+                Err(_) => None,
+            };
+            files_in_zip.push(zip_archive);
+        } else if temp_file_path.contains(".rar") {
+            rar_files.push(temp_file_path.to_string())
+        }
     }
 
-    let all_zip_files: Vec<String> = files_in_zip
+    let mut all_zip_files: Vec<String> = files_in_zip
         .into_iter()
         .filter_map(|zipped_file| match zipped_file {
             Some(zipped_file) => {
@@ -49,6 +51,26 @@ pub fn get_files(folder_path: &str) -> Vec<String> {
         .flatten()
         .collect();
 
+    let mut all_rar_files: Vec<String> = rar_files
+        .into_iter()
+        .map(|rar_file: String| {
+            let new_command = Command::new("rar")
+                .arg("lb")
+                .arg(&rar_file)
+                .output()
+                .expect("failed to list files in rar.");
+
+            let rar_contents = String::from_utf8(new_command.stdout).unwrap();
+            let vec_file_list = rar_contents
+                .split("\n")
+                .map(|temp_str| temp_str.to_string());
+            vec_file_list.to_owned().collect::<Vec<_>>()
+        })
+        .flatten()
+        .collect();
+
+    all_zip_files.append(&mut all_rar_files);
+
     let is_music_file = |file_string: String| {
         if file_string.contains(".wav") {
             true
@@ -63,20 +85,11 @@ pub fn get_files(folder_path: &str) -> Vec<String> {
 
     let final_list: Vec<String> = all_zip_files
         .into_iter()
-        .filter_map(|file| {
-            /*
-            let file_path = Path::new(&file);
-            let temp_path = base_path.join(file_path);
-            let is_file = metadata(temp_path).unwrap().is_file();
-            */
-            match is_music_file(file.clone()) {
-                true => Some(file),
-                false => None,
-            }
+        .filter_map(|file| match is_music_file(file.clone()) {
+            true => Some(file),
+            false => None,
         })
         .collect();
-    //let all_zip_files = files_in_zip.into_iter().flatten().collect();
-
     final_list
 }
 

@@ -88,13 +88,10 @@ impl DownloadFiles<Option<String>> for MediaFireMetadata {
             let path_str = &file_name;
 
             let path = Path::new(path_str);
-            let file = match fs::File::create(original_file_name) {
+            let mut file = match fs::File::create(&path) {
                 Ok(file) => file,
                 Err(e) => panic!("Couldn't open {}", e),
             };
-
-            let mut zip = zip::ZipWriter::new(file);
-            let options = FileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
 
             let resp_content = reqwest::get(&download_url)
                 .await
@@ -103,9 +100,7 @@ impl DownloadFiles<Option<String>> for MediaFireMetadata {
                 .await
                 .unwrap();
 
-            zip.start_file(path_str, options).unwrap();
-            zip.write_all(&resp_content).unwrap();
-            zip.finish().unwrap();
+            file.write_all(&resp_content).unwrap();
         }
     }
 }

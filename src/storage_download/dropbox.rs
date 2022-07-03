@@ -131,7 +131,7 @@ impl DownloadFiles<Option<String>> for DropboxMetadata {
         let full_file_path = format!("{}/{}.zip", &self.file_path, new_file_name);
         println!("here is the path in dropbox: {}", &full_file_path);
         let path = Path::new(&full_file_path);
-        let file = match fs::File::create(path) {
+        let mut file = match fs::File::create(path) {
             Ok(val) => val,
             Err(e) => panic!("Couldn't open the file: {}", e),
         };
@@ -143,11 +143,6 @@ impl DownloadFiles<Option<String>> for DropboxMetadata {
             .await
             .unwrap();
 
-        let mut zip = zip::ZipWriter::new(file);
-        let options = FileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
-
-        zip.start_file(&full_file_path, options).unwrap();
-        zip.write_all(&resp).unwrap();
-        zip.finish().unwrap();
+        file.write_all(&resp).unwrap();
     }
 }

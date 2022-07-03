@@ -7,7 +7,7 @@ use google_drive3::{hyper, hyper_rustls, oauth2, DriveHub, Error};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::env;
-use std::fs;
+use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::Path;
 use tokio;
@@ -209,22 +209,35 @@ impl DownloadFiles<Result<(Response<Body>, File), Error>> for GoogleDriveMetadat
             };
             let path = Path::new(&path_str);
             let display = path.display();
-            let file = match fs::File::create(&self.id) {
+            let mut file = match fs::File::create(&path) {
                 Ok(file) => file,
                 Err(e) => panic!("couldn't open {}: {}", display, e),
             };
 
             println!("Here is the file path google: {}", &path_str);
 
-            let mut zip = zip::ZipWriter::new(file);
+            //let mut zip = zip::ZipWriter::new(file);
 
-            let options = FileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
+            //let options = FileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
 
             let new_response = to_bytes(resp.into_body()).await.unwrap();
 
-            zip.start_file(&path_str, options).unwrap();
-            zip.write_all(&new_response).unwrap();
-            zip.finish().unwrap();
+            let file_name = format!("{}.zip", &self.id);
+            //zip.start_file(&file_name, options).unwrap();
+            file.write_all(&new_response).unwrap();
+            //zip.finish().unwrap();
+
+            let new_file = fs::File::open(&path).unwrap();
+
+            let mut new_archive = zip::ZipArchive::new(new_file);
+
+            let new_path_str = path_str.clone().replace(".zip", ".rar");
+            if let Err(files) = new_archive {
+                let new_file = OpenOptions::new().write(true).open(&new_path_str);
+
+                let mut rar_file = fs::File::create(&new_path_str).unwrap();
+                rar_file.write_all(&new_response).unwrap();
+            };
         }
     }
 }

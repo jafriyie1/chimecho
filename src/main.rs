@@ -12,34 +12,55 @@ use storage_download::google_drive::GoogleFileType;
 use storage_download::mediafire::MediaFireMetadata;
 use storage_download::{AssocDataForDownload, DownloadFiles, DownloadOptions};
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use serde_json;
 
+#[derive(Parser, Debug)]
 #[clap(
     author = "Joel Afriyie",
     version = "0.1.0",
     about = "Program used to get music sample data from Reddit"
 )]
 /// Program used to get music sample data from Reddit
-#[derive(Parser, Default, Debug)]
-pub struct CLI {
-    /// Optional query string for Reddit API
-    #[clap(short, long)]
-    q: Option<String>,
-    /// Optional time period. Example: after=7d
-    #[clap(short, long)]
-    time_period: Option<String>,
-    /// Number of steps to iterate over posts list
-    #[clap(short, long)]
-    step_size: Option<usize>,
-    /// File path folder for the music data to live in
-    #[clap(short, long)]
-    file_path: String,
+struct CLI {
+    #[clap(subcommand)]
+    cmd: SubCommand,
 }
 
-fn main() {
-    let args = CLI::parse();
-    let posts = reddit::get_posts(args.q.clone(), args.time_period.clone());
+#[derive(Subcommand, Debug)]
+enum SubCommand {
+    // Download data from reddit
+    Download {
+        /// Optional query string for Reddit API
+        #[clap(short, long)]
+        q: Option<String>,
+        /// Optional time period. Example: after=7d
+        #[clap(short, long)]
+        time_period: Option<String>,
+        /// Number of steps to iterate over posts list
+        #[clap(short, long)]
+        step_size: Option<usize>,
+        /// File path folder for the music data to live in
+        #[clap(short, long)]
+        file_path: String,
+    },
+    Upload {
+        /// File path folder that contains zip and rar files
+        #[clap(short, long)]
+        file_path: String,
+        /// bucket name for google cloud storage upload
+        #[clap(short, long)]
+        bucket: String,
+    },
+}
+
+fn get_zip_music(
+    q: Option<String>,
+    time_period: Option<String>,
+    step_size: Option<usize>,
+    file_path: String,
+) -> std::io::Result<()> {
+    let posts = reddit::get_posts(q, time_period);
     let response = match posts {
         Ok(val) => val,
         Err(e) => panic!(
@@ -48,11 +69,11 @@ fn main() {
         ),
     };
 
-    let step_size = match args.step_size {
+    let step_size = match step_size {
         Some(val) => val,
         None => 1,
     };
-    println!("yooo here is the file path: {}", &args.file_path);
+    println!("yooo here is the file path: {}", &file_path);
 
     let vec_basic_list: RequestSubmissionResponse = serde_json::from_str(&response).unwrap();
     let vec_basic_list = vec_basic_list.items;
@@ -81,14 +102,14 @@ fn main() {
                     download: DownloadOptions::GoogleDrive(GoogleDriveMetadata::new(
                         post.get_full_url().as_str(),
                         post.get_title(),
-                        args.file_path.clone(),
+                        file_path.clone(),
                     )),
                     website_metadata: post,
                 }),
                 "mediafire.com" => Some(AssocDataForDownload {
                     download: DownloadOptions::Mediafire(MediaFireMetadata::new(
                         post.get_full_url(),
-                        args.file_path.clone(),
+                        file_path.clone(),
                     )),
                     website_metadata: post,
                 }),
@@ -96,7 +117,7 @@ fn main() {
                     download: DownloadOptions::Dropbox(DropboxMetadata::new(
                         post.get_full_url(),
                         post.get_title(),
-                        args.file_path.clone(),
+                        file_path.clone(),
                     )),
                     website_metadata: post,
                 }),
@@ -115,6 +136,32 @@ fn main() {
             DownloadOptions::Mediafire(val) => val.download(None),
         }
     }
-    let get_all_sample_path = download_utils::get_files(&args.file_path.clone());
+
+    Ok(())
+}
+
+fn upload_to_gcs(file_path: String) -> std::io::Result<()> {
+    let get_all_sample_path = download_utils::get_files(&file_path.clone());
     println!("Got all of the files {:?}", get_all_sample_path);
+    Ok(())
+}
+
+fn main() {
+    let args = CLI::parse();
+
+    match args.cmd {
+        SubCommand::Download {
+            q,
+            time_period,
+            step_size,
+            file_path,
+        } => match get_zip_music(q, time_period, step_size, file_path.clone()) {
+            Ok(_) => {}
+            Err(e) => eprintln!("error with downloading zip files: {}", e),
+        },
+        SubCommand::Upload { file_path, bucket } => match upload_to_gcs(file_path.clone()) {
+            Ok(_) => {}
+            Err(e) => eprintln!("error in uploading to gcs: {}", e),
+        },
+    }
 }

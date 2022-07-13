@@ -14,6 +14,7 @@ pub struct MediaFireMetadata {
     url: String,
     raw_html: String,
     file_path: String,
+    out_path: Option<String>,
 }
 
 impl MediaFireMetadata {
@@ -23,6 +24,7 @@ impl MediaFireMetadata {
             url,
             raw_html,
             file_path,
+            out_path: None,
         }
     }
 
@@ -78,7 +80,7 @@ impl MediaFireMetadata {
 
 impl DownloadFiles<Option<String>> for MediaFireMetadata {
     #[tokio::main]
-    async fn download(self, _resp: Option<String>) {
+    async fn download(mut self, _resp: Option<String>) {
         let resp_download_url = self.get_download_url();
         let resp_file_name = self.get_file_name();
 
@@ -101,6 +103,12 @@ impl DownloadFiles<Option<String>> for MediaFireMetadata {
                 .unwrap();
 
             file.write_all(&resp_content).unwrap();
+            self.out_path = Some(
+                original_file_name
+                    .clone()
+                    .replace(".zip", "")
+                    .replace(".rar", ""),
+            );
         }
     }
 }

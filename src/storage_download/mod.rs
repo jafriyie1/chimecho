@@ -9,6 +9,8 @@ use crate::MediaFireMetadata;
 
 pub trait DownloadFiles<T> {
     fn download(self, resp: T);
+
+    fn metadata_to_sql(self);
 }
 
 #[derive(Debug)]

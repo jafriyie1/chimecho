@@ -73,6 +73,7 @@ pub struct DropboxMetadata {
     file_name: String,
     url: String,
     file_path: String,
+    out_path: Option<String>,
 }
 
 impl DropboxMetadata {
@@ -94,6 +95,7 @@ impl DropboxMetadata {
             url: new_url,
             file_name: new_file_name,
             file_path,
+            out_path: None,
         }
     }
     // leaving code here in case you want to use this function in the future
@@ -126,7 +128,7 @@ impl DropboxMetadata {
 
 impl DownloadFiles<Option<String>> for DropboxMetadata {
     #[tokio::main]
-    async fn download(self, _resp: Option<String>) {
+    async fn download(mut self, _resp: Option<String>) {
         let new_file_name = self.file_name.clone().replace("/", "_");
         let full_file_path = format!("{}/{}.zip", &self.file_path, new_file_name);
         println!("here is the path in dropbox: {}", &full_file_path);
@@ -144,5 +146,6 @@ impl DownloadFiles<Option<String>> for DropboxMetadata {
             .unwrap();
 
         file.write_all(&resp).unwrap();
+        self.out_path = Some(new_file_name.clone());
     }
 }

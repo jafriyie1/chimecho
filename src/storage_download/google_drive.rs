@@ -40,6 +40,7 @@ pub struct GoogleDriveMetadata {
     url: String,
     pub file_metadata: Option<GoogleFileType>,
     file_path: String,
+    out_path: Option<String>,
 }
 
 #[tokio::main]
@@ -190,29 +191,29 @@ impl GoogleDriveMetadata {
             url: url.to_string(),
             file_metadata,
             file_path,
+            out_path: None,
         }
     }
 }
 
 impl DownloadFiles<Result<(Response<Body>, File), Error>> for GoogleDriveMetadata {
     #[tokio::main]
-    async fn download(self, resp: Result<(Response<Body>, File), Error>) {
+    async fn download(mut self, resp: Result<(Response<Body>, File), Error>) {
         let data_resp = match resp {
             Ok(val) => Some(val),
             Err(_) => None,
         };
 
         if let Some((resp, google_file)) = data_resp {
-            let path_str = match &google_file.name {
-                Some(val) => format!("{}/{}.zip", &self.file_path, val),
-                None => format!("{}/{}.zip", &self.file_path, &self.id),
-            };
+            let path_str = format!("{}/{}.zip", &self.file_path, &self.id);
             let path = Path::new(&path_str);
             let display = path.display();
             let mut file = match fs::File::create(&path) {
                 Ok(file) => file,
                 Err(e) => panic!("couldn't open {}: {}", display, e),
             };
+
+            self.out_path = Some(self.id.clone());
 
             println!("Here is the file path google: {}", &path_str);
 
@@ -233,9 +234,13 @@ impl DownloadFiles<Result<(Response<Body>, File), Error>> for GoogleDriveMetadat
 
             let new_path_str = path_str.clone().replace(".zip", ".rar");
             if let Err(files) = new_archive {
-                let new_file = OpenOptions::new().write(true).open(&new_path_str);
+                fs::remove_file(&path_str).unwrap();
+                //let new_file = OpenOptions::new().write(true).open(&new_path_str);
 
                 let mut rar_file = fs::File::create(&new_path_str).unwrap();
+
+                self.out_path = Some(self.id.clone());
+
                 rar_file.write_all(&new_response).unwrap();
             };
         }

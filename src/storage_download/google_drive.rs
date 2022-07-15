@@ -16,6 +16,8 @@ use zip::write::FileOptions;
 
 use crate::DownloadFiles;
 
+use crate::postgres_orm;
+
 #[derive(Debug)]
 pub struct GoogleFolder {
     file_id: String,
@@ -114,26 +116,26 @@ impl GoogleDriveMetadata {
         result
     }
 
-    #[tokio::main]
-    pub async fn download_file(self, hub: &DriveHub) {
-        let file = hub
-            .files()
-            .get(self.id.as_str())
-            .param("alt", "media")
-            .supports_team_drives(true)
-            .supports_all_drives(true)
-            .include_permissions_for_view("published")
-            .acknowledge_abuse(false)
-            .add_scope(Scope::Full)
-            .doit()
-            .await;
+    //#[tokio::main]
+    //pub async fn download_file(self, hub: &DriveHub, conn: &diesel::PgConnection) {
+    //    let file = hub
+    //        .files()
+    //        .get(self.id.as_str())
+    //        .param("alt", "media")
+    //        .supports_team_drives(true)
+    //        .supports_all_drives(true)
+    //        .include_permissions_for_view("published")
+    //        .acknowledge_abuse(false)
+    //        .add_scope(Scope::Full)
+    //        .doit()
+    //        .await;
 
-        tokio::task::spawn_blocking(|| {
-            GoogleDriveMetadata::download(self, file);
-        })
-        .await
-        .expect("Task panicked")
-    }
+    //    tokio::task::spawn_blocking(|| {
+    //        GoogleDriveMetadata::download(self, file, conn);
+    //    })
+    //    .await
+    //    .expect("Task panicked")
+    //}
 
     fn get_id(url: &str) -> String {
         lazy_static! {
@@ -196,9 +198,26 @@ impl GoogleDriveMetadata {
     }
 }
 
-impl DownloadFiles<Result<(Response<Body>, File), Error>> for GoogleDriveMetadata {
+impl DownloadFiles<DriveHub> for GoogleDriveMetadata {
+    fn metadata_to_sql(self, conn: &diesel::PgConnection) {
+        postgres_orm::create_file_row(conn, self.url.clone(), self.out_path.unwrap().clone());
+    }
+
     #[tokio::main]
-    async fn download(mut self, resp: Result<(Response<Body>, File), Error>) {
+    async fn download(mut self, hub: Option<&DriveHub>, conn: &diesel::PgConnection) {
+        let resp = hub
+            .unwrap()
+            .files()
+            .get(self.id.as_str())
+            .param("alt", "media")
+            .supports_team_drives(true)
+            .supports_all_drives(true)
+            .include_permissions_for_view("published")
+            .acknowledge_abuse(false)
+            .add_scope(Scope::Full)
+            .doit()
+            .await;
+
         let data_resp = match resp {
             Ok(val) => Some(val),
             Err(_) => None,
@@ -243,6 +262,8 @@ impl DownloadFiles<Result<(Response<Body>, File), Error>> for GoogleDriveMetadat
 
                 rar_file.write_all(&new_response).unwrap();
             };
+
+            self.metadata_to_sql(conn);
         }
     }
 }

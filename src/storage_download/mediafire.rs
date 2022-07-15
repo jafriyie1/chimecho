@@ -4,9 +4,11 @@ use soup::prelude::*;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+use std::time;
 use tokio;
 use zip::write::FileOptions;
 
+use crate::postgres_orm;
 use crate::DownloadFiles;
 
 #[derive(Debug)]
@@ -78,9 +80,13 @@ impl MediaFireMetadata {
     }
 }
 
-impl DownloadFiles<Option<String>> for MediaFireMetadata {
+impl DownloadFiles<String> for MediaFireMetadata {
+    fn metadata_to_sql(self, conn: &diesel::PgConnection) {
+        postgres_orm::create_file_row(conn, self.url.clone(), self.out_path.unwrap().clone());
+    }
+
     #[tokio::main]
-    async fn download(mut self, _resp: Option<String>) {
+    async fn download(mut self, _resp: Option<&String>, conn: &diesel::PgConnection) {
         let resp_download_url = self.get_download_url();
         let resp_file_name = self.get_file_name();
 
@@ -109,6 +115,8 @@ impl DownloadFiles<Option<String>> for MediaFireMetadata {
                     .replace(".zip", "")
                     .replace(".rar", ""),
             );
+
+            self.metadata_to_sql(conn);
         }
     }
 }

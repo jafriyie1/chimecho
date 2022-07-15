@@ -7,10 +7,12 @@ use crate::DropboxMetadata;
 use crate::GoogleDriveMetadata;
 use crate::MediaFireMetadata;
 
-pub trait DownloadFiles<T> {
-    fn download(self, resp: T);
+use diesel::pg::PgConnection;
 
-    fn metadata_to_sql(self);
+pub trait DownloadFiles<T> {
+    fn download(self, hub_conn: Option<&T>, conn: &PgConnection);
+
+    fn metadata_to_sql(self, conn: &PgConnection);
 }
 
 #[derive(Debug)]

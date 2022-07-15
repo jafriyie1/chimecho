@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate diesel;
+mod postgres_orm;
 mod source;
 mod storage_download;
 
@@ -14,6 +17,8 @@ use storage_download::{AssocDataForDownload, DownloadFiles, DownloadOptions};
 
 use clap::{Parser, Subcommand};
 use serde_json;
+
+use itertools::izip;
 
 #[derive(Parser, Debug)]
 #[clap(
@@ -125,24 +130,55 @@ fn get_zip_music(
             })
             .collect();
 
+    let postgres_conn = postgres_orm::establish_connection();
     for assoc_data in metadata_and_download_vec.into_iter() {
         match assoc_data.download {
             DownloadOptions::GoogleDrive(val) => match val.file_metadata {
-                Some(GoogleFileType::GoogleFile(_)) => val.download_file(&google_drive_hub),
+                Some(GoogleFileType::GoogleFile(_)) => {
+                    val.download(Some(&google_drive_hub), &postgres_conn)
+                }
                 Some(GoogleFileType::GoogleFolder(_)) => (),
                 _ => (),
             },
-            DownloadOptions::Dropbox(val) => val.download(None),
-            DownloadOptions::Mediafire(val) => val.download(None),
+            DownloadOptions::Dropbox(val) => val.download(None, &postgres_conn),
+            DownloadOptions::Mediafire(val) => val.download(None, &postgres_conn),
         }
     }
 
+    //for assoc_data in metadata_and_download_vec.into_iter() {
+    //    match assoc_data.download {
+    //        DownloadOptions::GoogleDrive(val) => match val.file_metadata {
+    //            Some(GoogleFileType::GoogleFile(_)) => val.metadata_to_sql(&postgres_conn),
+    //            Some(GoogleFileType::GoogleFolder(_)) => (),
+    //            _ => (),
+    //        },
+    //        DownloadOptions::Dropbox(val) => val.metadata_to_sql(&postgres_conn),
+    //        DownloadOptions::Mediafire(val) => val.metadata_to_sql(&postgres_conn),
+    //    }
+    //}
     Ok(())
 }
 
 fn upload_to_gcs(file_path: String) -> std::io::Result<()> {
     let get_all_sample_path = download_utils::get_files(&file_path.clone());
-    println!("Got all of the files {:?}", get_all_sample_path);
+    //println!("Got all of the files {:?}", get_all_sample_path);
+    let postgres_conn = postgres_orm::establish_connection();
+
+    for file_obj in get_all_sample_path {
+        let temp_file = &file_obj.compressed_file_root;
+
+        for (file_root, all_files, instruments) in
+            izip!(temp_file, &file_obj.file_name_list, &file_obj.instrument)
+        {
+            postgres_orm::create_individual_file_row(
+                &postgres_conn,
+                file_root.to_string(),
+                all_files.to_string(),
+                instruments.to_string(),
+            );
+        }
+    }
+
     Ok(())
 }
 

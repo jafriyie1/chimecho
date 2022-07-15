@@ -78,16 +78,16 @@ impl FilesInCompressed {
 
     fn filter_files(file_vec_list: Vec<String>) -> Vec<String> {
         let is_music_file = |file_string: String| {
-            if file_string.contains(".wav") {
+            if file_string.contains("__MACOSX") {
+                false
+            } else if file_string.contains("__macosx") {
+                false
+            } else if file_string.contains(".wav") {
                 true
             } else if file_string.contains(".mp3") {
                 true
             } else if file_string.contains(".flac") {
                 true
-            } else if file_string.contains("__MACOSX") {
-                false
-            } else if file_string.contains("__macosx") {
-                false
             } else {
                 false
             }

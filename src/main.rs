@@ -159,7 +159,7 @@ fn get_zip_music(
     Ok(())
 }
 
-fn upload_to_gcs(file_path: String) -> std::io::Result<()> {
+fn upload_to_gcs(file_path: String, bucket_name: String) -> std::io::Result<()> {
     let get_all_sample_path = download_utils::get_files(&file_path.clone());
     //println!("Got all of the files {:?}", get_all_sample_path);
     let postgres_conn = postgres_orm::establish_connection();
@@ -179,6 +179,18 @@ fn upload_to_gcs(file_path: String) -> std::io::Result<()> {
         }
     }
 
+    download_utils::unzip_files(&file_path.clone());
+    // upload to gcs
+    let _new_command = std::process::Command::new("gsutil")
+        .arg("-m")
+        .arg("cp")
+        .arg("-r")
+        .arg("-n")
+        .arg("./unzipped/")
+        .arg(format!("gs://{}", bucket_name).as_str())
+        .output()
+        .expect("failed to list files in rar.");
+
     Ok(())
 }
 
@@ -195,9 +207,11 @@ fn main() {
             Ok(_) => {}
             Err(e) => eprintln!("error with downloading zip files: {}", e),
         },
-        SubCommand::Upload { file_path, bucket } => match upload_to_gcs(file_path.clone()) {
-            Ok(_) => {}
-            Err(e) => eprintln!("error in uploading to gcs: {}", e),
-        },
+        SubCommand::Upload { file_path, bucket } => {
+            match upload_to_gcs(file_path.clone(), bucket.clone()) {
+                Ok(_) => {}
+                Err(e) => eprintln!("error in uploading to gcs: {}", e),
+            }
+        }
     }
 }

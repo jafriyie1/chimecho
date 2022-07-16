@@ -49,6 +49,10 @@ impl FilesInCompressed {
                 "808".to_string()
             } else if indi_file_string.contains("foley") {
                 "foley".to_string()
+            } else if indi_file_string.contains("tom") {
+                "foley".to_string()
+            } else if indi_file_string.contains("fx") {
+                "foley".to_string()
             } else if indi_file_string.contains("snap") {
                 "snap".to_string()
             } else if indi_file_string.contains("lead") {
@@ -69,7 +73,7 @@ impl FilesInCompressed {
         };
 
         for indi_file in file_list {
-            let instrument_from_file = instrument_func(&indi_file);
+            let instrument_from_file = instrument_func(&indi_file.to_lowercase());
             instrument_list.push(instrument_from_file);
         }
 
@@ -102,6 +106,38 @@ impl FilesInCompressed {
             .collect();
         final_list
     }
+}
+
+pub fn unzip_files(folder_path: &str) {
+    let file_paths = match fs::read_dir(&folder_path) {
+        Ok(val) => val,
+        Err(e) => panic!(
+            "Downloaded files were not saved to directory, so they cannot be read. {}",
+            e
+        ),
+    };
+
+    let mut file_list: Vec<String> = Vec::new();
+
+    for path in file_paths {
+        let temp_path = path.unwrap().path().display().to_string();
+        if !temp_path.contains("__MACOSX") {
+            file_list.push(temp_path);
+        }
+    }
+
+    // use 7z for unzipping both rar and zip
+    for zip_file in file_list {
+        let _new_command = Command::new("7z")
+            .arg("x")
+            .arg(&zip_file)
+            .arg("-ounzipped")
+            .output()
+            .expect("failed to list files in rar.");
+    }
+
+    // remove MACOSX directory
+    fs::remove_dir_all("./unzipped/__MACOSX").unwrap();
 }
 
 pub fn get_files(folder_path: &str) -> Vec<FilesInCompressed> {

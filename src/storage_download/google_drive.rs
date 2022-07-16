@@ -5,7 +5,7 @@ use google_drive3::hyper::Body;
 use google_drive3::hyper::Response;
 use google_drive3::{hyper, hyper_rustls, oauth2, DriveHub, Error};
 use lazy_static::lazy_static;
-use regex::Regex;
+use regex::{Captures, Regex};
 use std::env;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
@@ -166,10 +166,18 @@ impl GoogleDriveMetadata {
             }
         }
 
+        let regex_func = |cap: Option<Captures>| -> String {
+            if cap.is_some() {
+                let id = cap.unwrap().get(1).map_or("", |m| m.as_str());
+                id.to_string()
+            } else {
+                "".to_string()
+            }
+        };
+
         println!("{:?}", url);
-        let captured = use_re.captures(url).unwrap();
-        let id = captured.get(1).map_or("", |m| m.as_str());
-        id.to_string()
+        let captured = regex_func(use_re.captures(url));
+        captured
     }
 
     pub fn new(url: &str, title: String, file_path: String) -> GoogleDriveMetadata {

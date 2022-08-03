@@ -4,9 +4,7 @@ use soup::prelude::*;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
-use std::time;
 use tokio;
-use zip::write::FileOptions;
 
 use crate::postgres_orm;
 use crate::DownloadFiles;
@@ -33,6 +31,7 @@ impl MediaFireMetadata {
     #[tokio::main]
     async fn set_html(url: &str) -> String {
         let client = reqwest::Client::builder().build().unwrap();
+        println!("{}", &url);
         let response = client
             .get(url)
             .header(
@@ -56,14 +55,10 @@ impl MediaFireMetadata {
     fn get_file_name(&self) -> Option<String> {
         let soup = Soup::new(&self.raw_html);
 
-        let find_file_name = soup.tag("div").attr("class", "filename").find();
-
-        let file_name = match find_file_name {
-            Some(val) => Some(val.text()),
-            None => None,
-        };
-
-        file_name
+        soup.tag("div")
+            .attr("class", "filename")
+            .find()
+            .map(|val| val.text())
     }
 
     fn get_download_url(&self) -> Option<String> {
@@ -71,18 +66,16 @@ impl MediaFireMetadata {
 
         let find_url = soup.tag("a").attr("class", "popsok").find();
 
-        let download_url = match find_url {
+        match find_url {
             Some(val) => val.get("href"),
             None => None,
-        };
-
-        download_url
+        }
     }
 }
 
 impl DownloadFiles<String> for MediaFireMetadata {
     fn metadata_to_sql(self, conn: &diesel::PgConnection) {
-        postgres_orm::create_file_row(conn, self.url.clone(), self.out_path.unwrap().clone());
+        postgres_orm::create_file_row(conn, self.url.clone(), self.out_path.unwrap());
     }
 
     #[tokio::main]

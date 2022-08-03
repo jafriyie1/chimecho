@@ -16,7 +16,6 @@ use storage_download::mediafire::MediaFireMetadata;
 use storage_download::{AssocDataForDownload, DownloadFiles, DownloadOptions};
 
 use clap::{Parser, Subcommand};
-use serde_json;
 
 use itertools::izip;
 
@@ -27,7 +26,7 @@ use itertools::izip;
     about = "Program used to get music sample data from Reddit"
 )]
 /// Program used to get music sample data from Reddit
-struct CLI {
+struct Cli {
     #[clap(subcommand)]
     cmd: SubCommand,
 }
@@ -74,32 +73,27 @@ fn get_zip_music(
         ),
     };
 
-    let step_size = match step_size {
-        Some(val) => val,
-        None => 1,
-    };
+    let step_size = step_size.unwrap_or(1);
+
     println!("yooo here is the file path: {}", &file_path);
 
     let vec_basic_list: RequestSubmissionResponse = serde_json::from_str(&response).unwrap();
     let vec_basic_list = vec_basic_list.items;
-    let submission_data_vec: Vec<RedditPost> = vec_basic_list
-        .iter()
-        .step_by(step_size)
-        .filter_map(|sub| match &sub.url {
-            Some(url) => Some(RedditPost::new(
+    let submission_data_vec = vec_basic_list.iter().step_by(step_size).filter_map(|sub| {
+        sub.url.as_ref().map(|url| {
+            RedditPost::new(
                 sub.domain.as_str(),
                 url.clone(),
                 sub.subreddit.clone(),
                 sub.score,
                 sub.title.clone(),
-            )),
-            None => None,
+            )
         })
-        .collect();
+    });
 
     let google_drive_hub = get_google_drive_connector().unwrap();
 
-    let metadata_and_download_vec: Vec<AssocDataForDownload<DownloadOptions, RedditPost>> =
+    let metadata_and_download_vec =
         submission_data_vec
             .into_iter()
             .filter_map(|post| match post.url_domain {
@@ -127,11 +121,10 @@ fn get_zip_music(
                     website_metadata: post,
                 }),
                 _ => None,
-            })
-            .collect();
+            });
 
     let postgres_conn = postgres_orm::establish_connection();
-    for assoc_data in metadata_and_download_vec.into_iter() {
+    for assoc_data in metadata_and_download_vec {
         match assoc_data.download {
             DownloadOptions::GoogleDrive(val) => match val.file_metadata {
                 Some(GoogleFileType::GoogleFile(_)) => {
@@ -145,22 +138,11 @@ fn get_zip_music(
         }
     }
 
-    //for assoc_data in metadata_and_download_vec.into_iter() {
-    //    match assoc_data.download {
-    //        DownloadOptions::GoogleDrive(val) => match val.file_metadata {
-    //            Some(GoogleFileType::GoogleFile(_)) => val.metadata_to_sql(&postgres_conn),
-    //            Some(GoogleFileType::GoogleFolder(_)) => (),
-    //            _ => (),
-    //        },
-    //        DownloadOptions::Dropbox(val) => val.metadata_to_sql(&postgres_conn),
-    //        DownloadOptions::Mediafire(val) => val.metadata_to_sql(&postgres_conn),
-    //    }
-    //}
     Ok(())
 }
 
 fn upload_to_gcs(file_path: String, bucket_name: String) -> std::io::Result<()> {
-    let get_all_sample_path = download_utils::get_files(&file_path.clone());
+    let get_all_sample_path = download_utils::get_files(&file_path);
     //println!("Got all of the files {:?}", get_all_sample_path);
     let postgres_conn = postgres_orm::establish_connection();
 
@@ -179,7 +161,7 @@ fn upload_to_gcs(file_path: String, bucket_name: String) -> std::io::Result<()> 
         }
     }
 
-    download_utils::unzip_files(&file_path.clone());
+    download_utils::unzip_files(&file_path);
     // upload to gcs
     let _new_command = std::process::Command::new("gsutil")
         .arg("-m")
@@ -195,7 +177,7 @@ fn upload_to_gcs(file_path: String, bucket_name: String) -> std::io::Result<()> 
 }
 
 fn main() {
-    let args = CLI::parse();
+    let args = Cli::parse();
 
     match args.cmd {
         SubCommand::Download {
@@ -203,15 +185,13 @@ fn main() {
             time_period,
             step_size,
             file_path,
-        } => match get_zip_music(q, time_period, step_size, file_path.clone()) {
+        } => match get_zip_music(q, time_period, step_size, file_path) {
             Ok(_) => {}
             Err(e) => eprintln!("error with downloading zip files: {}", e),
         },
-        SubCommand::Upload { file_path, bucket } => {
-            match upload_to_gcs(file_path.clone(), bucket.clone()) {
-                Ok(_) => {}
-                Err(e) => eprintln!("error in uploading to gcs: {}", e),
-            }
-        }
+        SubCommand::Upload { file_path, bucket } => match upload_to_gcs(file_path, bucket) {
+            Ok(_) => {}
+            Err(e) => eprintln!("error in uploading to gcs: {}", e),
+        },
     }
 }

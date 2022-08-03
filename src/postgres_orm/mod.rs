@@ -1,10 +1,8 @@
 //#[macro_use]
 //extern crate diesel;
 //extern crate dotenv;
-pub mod schema;
-use diesel::types::Timestamp;
-
 pub mod models;
+pub mod schema;
 
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -15,8 +13,10 @@ pub fn establish_connection() -> PgConnection {
     dotenv().ok();
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    PgConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url))
+    PgConnection::establish(&database_url)
+        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 }
+
 pub fn create_file_row(
     conn: &PgConnection,
     url: String,
@@ -28,7 +28,7 @@ pub fn create_file_row(
 
     let new_file_source = models::NewFileSource {
         url: url.as_str(),
-        compressed_file_name: &compressed_file_name.as_str(),
+        compressed_file_name: compressed_file_name.as_str(),
         time_inserted: &timestamp,
     };
 
@@ -37,6 +37,7 @@ pub fn create_file_row(
         .get_result(conn)
         .expect("Error saving new file source")
 }
+
 pub fn create_individual_file_row(
     conn: &PgConnection,
     compressed_file_name: String,

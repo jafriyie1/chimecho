@@ -1,11 +1,12 @@
 use reqwest;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct RedditPost<'a> {
     pub url_domain: &'a str,
     full_url: String,
+    #[allow(unused)]
     subreddit: String,
+    #[allow(unused)]
     score: f64,
     title: String,
 }
@@ -67,7 +68,7 @@ pub async fn get_posts(
     };
 
     let base_url = match q {
-        Some(val) => format!("{}&{}", base_url, val),
+        Some(val) => format!("{}&q={}", base_url, val),
         None => base_url,
     };
 

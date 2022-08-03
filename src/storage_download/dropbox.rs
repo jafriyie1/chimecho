@@ -1,18 +1,12 @@
+use crate::postgres_orm;
+use crate::DownloadFiles;
 use reqwest;
-use reqwest::header::AUTHORIZATION;
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::collections::HashMap;
-use std::env;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
-use std::time;
 use tokio;
-use zip::write::FileOptions;
-
-use crate::postgres_orm;
-use crate::DownloadFiles;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DropboxAudienceOptions {
@@ -83,7 +77,6 @@ impl DropboxMetadata {
         // hack for now
         // roux on url adds amp; and %5C
         // on decoding on string from
-        // &
         // this has created an issue with
         // getting the right url for
         // dropbox
@@ -100,42 +93,16 @@ impl DropboxMetadata {
             out_path: None,
         }
     }
-    // leaving code here in case you want to use this function in the future
-    /*
-    #[tokio::main]
-    async fn get_download_url_and_file(&self) -> (Option<String>, Option<String>) {
-        let client = reqwest::Client::builder().build().unwrap();
-
-        let endpoint = "https://content.dropboxapi.com/2/sharing/get_shared_link_file";
-        let json_val = serde_json::to_string(self).unwrap();
-        let token = format!("Bearer {}", env::var("DROPBOX_APP_TOKEN").unwrap());
-        let resp = client
-            .post(endpoint)
-            .header(AUTHORIZATION, token)
-            .header("Dropbox-API-Arg", &json_val)
-            .send()
-            .await
-            .unwrap();
-
-        let json_response: DropboxDownloadResponse =
-            serde_json::from_str(&resp.text().await.unwrap()).unwrap();
-
-        let download_url = Some(json_response.url);
-        let file_name = Some(json_response.name);
-
-        (download_url, file_name)
-    }
-    */
 }
 
 impl DownloadFiles<String> for DropboxMetadata {
     fn metadata_to_sql(self, conn: &diesel::PgConnection) {
-        postgres_orm::create_file_row(conn, self.url.clone(), self.out_path.unwrap().clone());
+        postgres_orm::create_file_row(conn, self.url.clone(), self.out_path.unwrap());
     }
 
     #[tokio::main]
     async fn download(mut self, _hub: Option<&String>, conn: &diesel::PgConnection) {
-        let new_file_name = self.file_name.clone().replace("/", "_");
+        let new_file_name = self.file_name.clone().replace('/', "_");
         let full_file_path = format!("{}/{}.zip", &self.file_path, new_file_name);
         println!("here is the path in dropbox: {}", &full_file_path);
         let path = Path::new(&full_file_path);

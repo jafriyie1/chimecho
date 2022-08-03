@@ -1,18 +1,14 @@
 use google_drive3::api::Scope;
-use google_drive3::api::{File, FileList};
 use google_drive3::hyper::body::to_bytes;
-use google_drive3::hyper::Body;
-use google_drive3::hyper::Response;
 use google_drive3::{hyper, hyper_rustls, oauth2, DriveHub, Error};
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 use std::env;
-use std::fs::{self, OpenOptions};
+use std::fs;
 use std::io::Write;
 use std::path::Path;
 use tokio;
 use yup_oauth2;
-use zip::write::FileOptions;
 
 use crate::DownloadFiles;
 
@@ -20,13 +16,17 @@ use crate::postgres_orm;
 
 #[derive(Debug)]
 pub struct GoogleFolder {
+    #[allow(dead_code)]
     file_id: String,
+    #[allow(dead_code)]
     file_name: String,
 }
 
 #[derive(Debug)]
 pub struct GoogleFile {
+    #[allow(dead_code)]
     file_id: String,
+    #[allow(dead_code)]
     file_name: String,
 }
 
@@ -96,47 +96,6 @@ impl GoogleDriveMetadata {
         }
     }
 
-    #[tokio::main]
-    pub async fn download_files_from_folder(
-        folder_id: &str,
-        hub: &DriveHub,
-    ) -> Result<(Response<Body>, FileList), Error> {
-        // recurse on result
-        // if result is not a folder
-        // add to list
-        let result = hub
-            .files()
-            .list()
-            .supports_all_drives(true)
-            .include_items_from_all_drives(true)
-            .q(&format!("'{}' in parents", folder_id))
-            .doit()
-            .await;
-
-        result
-    }
-
-    //#[tokio::main]
-    //pub async fn download_file(self, hub: &DriveHub, conn: &diesel::PgConnection) {
-    //    let file = hub
-    //        .files()
-    //        .get(self.id.as_str())
-    //        .param("alt", "media")
-    //        .supports_team_drives(true)
-    //        .supports_all_drives(true)
-    //        .include_permissions_for_view("published")
-    //        .acknowledge_abuse(false)
-    //        .add_scope(Scope::Full)
-    //        .doit()
-    //        .await;
-
-    //    tokio::task::spawn_blocking(|| {
-    //        GoogleDriveMetadata::download(self, file, conn);
-    //    })
-    //    .await
-    //    .expect("Task panicked")
-    //}
-
     fn get_id(url: &str) -> String {
         lazy_static! {
             static ref RE: Regex = Regex::new(
@@ -167,8 +126,8 @@ impl GoogleDriveMetadata {
         }
 
         let regex_func = |cap: Option<Captures>| -> String {
-            if cap.is_some() {
-                let id = cap.unwrap().get(1).map_or("", |m| m.as_str());
+            if let Some(cap_re) = cap {
+                let id = cap_re.get(1).map_or("", |m| m.as_str());
                 id.to_string()
             } else {
                 "".to_string()
@@ -208,7 +167,7 @@ impl GoogleDriveMetadata {
 
 impl DownloadFiles<DriveHub> for GoogleDriveMetadata {
     fn metadata_to_sql(self, conn: &diesel::PgConnection) {
-        postgres_orm::create_file_row(conn, self.url.clone(), self.out_path.unwrap().clone());
+        postgres_orm::create_file_row(conn, self.url.clone(), self.out_path.unwrap());
     }
 
     #[tokio::main]
@@ -231,7 +190,7 @@ impl DownloadFiles<DriveHub> for GoogleDriveMetadata {
             Err(_) => None,
         };
 
-        if let Some((resp, google_file)) = data_resp {
+        if let Some((resp, _)) = data_resp {
             let path_str = format!("{}/{}.zip", &self.file_path, &self.id);
             let path = Path::new(&path_str);
             let display = path.display();
@@ -250,17 +209,16 @@ impl DownloadFiles<DriveHub> for GoogleDriveMetadata {
 
             let new_response = to_bytes(resp.into_body()).await.unwrap();
 
-            let file_name = format!("{}.zip", &self.id);
             //zip.start_file(&file_name, options).unwrap();
             file.write_all(&new_response).unwrap();
             //zip.finish().unwrap();
 
             let new_file = fs::File::open(&path).unwrap();
 
-            let mut new_archive = zip::ZipArchive::new(new_file);
+            let new_archive = zip::ZipArchive::new(new_file);
 
             let new_path_str = path_str.clone().replace(".zip", ".rar");
-            if let Err(files) = new_archive {
+            if new_archive.is_err() {
                 fs::remove_file(&path_str).unwrap();
                 //let new_file = OpenOptions::new().write(true).open(&new_path_str);
 
@@ -269,7 +227,7 @@ impl DownloadFiles<DriveHub> for GoogleDriveMetadata {
                 self.out_path = Some(self.id.clone());
 
                 rar_file.write_all(&new_response).unwrap();
-            };
+            }
 
             self.metadata_to_sql(conn);
         }
@@ -293,6 +251,7 @@ mod tests {
         assert_eq!("folder", GoogleDriveMetadata::file_or_folder(test_one_url));
         assert_eq!("file", GoogleDriveMetadata::file_or_folder(test_two_url));
         assert_eq!("other", GoogleDriveMetadata::file_or_folder(test_three_url));
+        assert_eq!("folder", GoogleDriveMetadata::file_or_folder(test_four_url));
     }
 
     #[test]

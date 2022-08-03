@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-use zip::{self, ZipArchive};
+use zip;
 
 #[derive(Debug)]
 pub struct FilesInCompressed {
@@ -50,9 +50,9 @@ impl FilesInCompressed {
             } else if indi_file_string.contains("foley") {
                 "foley".to_string()
             } else if indi_file_string.contains("tom") {
-                "foley".to_string()
+                "tom".to_string()
             } else if indi_file_string.contains("fx") {
-                "foley".to_string()
+                "fx".to_string()
             } else if indi_file_string.contains("snap") {
                 "snap".to_string()
             } else if indi_file_string.contains("lead") {
@@ -82,18 +82,12 @@ impl FilesInCompressed {
 
     fn filter_files(file_vec_list: Vec<String>) -> Vec<String> {
         let is_music_file = |file_string: String| {
-            if file_string.contains("__MACOSX") {
+            if file_string.contains("__MACOSX") || file_string.contains("__macosx") {
                 false
-            } else if file_string.contains("__macosx") {
-                false
-            } else if file_string.contains(".wav") {
-                true
-            } else if file_string.contains(".mp3") {
-                true
-            } else if file_string.contains(".flac") {
-                true
             } else {
-                false
+                file_string.contains(".wav")
+                    || file_string.contains(".mp3")
+                    || file_string.contains(".flac")
             }
         };
 
@@ -137,7 +131,10 @@ pub fn unzip_files(folder_path: &str) {
     }
 
     // remove MACOSX directory
-    fs::remove_dir_all("./unzipped/__MACOSX").unwrap();
+    if fs::remove_dir_all("./unzipped/__MACOSX").is_ok() {
+        fs::remove_dir_all("./unzipped/__MACOSX").unwrap();
+        println!("removed MACOSX folder");
+    }
 }
 
 pub fn get_files(folder_path: &str) -> Vec<FilesInCompressed> {
@@ -167,7 +164,7 @@ pub fn get_files(folder_path: &str) -> Vec<FilesInCompressed> {
 
     let mut all_zip_files: Vec<FilesInCompressed> = files_in_zip
         .into_iter()
-        .map(|zipped_file| {
+        .filter_map(|zipped_file| {
             let temp_path = Path::new(&zipped_file);
             let read_file = fs::File::open(temp_path).unwrap();
             let zip_archive = match zip::ZipArchive::new(read_file) {
@@ -178,8 +175,7 @@ pub fn get_files(folder_path: &str) -> Vec<FilesInCompressed> {
             if let Some(temp_zip) = &zip_archive {
                 let temp_file_names = zip::ZipArchive::file_names(temp_zip);
 
-                let file_names_zip: Vec<&str> = temp_file_names.collect();
-                let file_names_to_string: Vec<String> = file_names_zip
+                let file_names_to_string: Vec<String> = temp_file_names
                     .into_iter()
                     .map(|file| file.to_string())
                     .collect();
@@ -190,10 +186,6 @@ pub fn get_files(folder_path: &str) -> Vec<FilesInCompressed> {
             } else {
                 None
             }
-        })
-        .filter_map(|items| match items {
-            Some(val) => Some(val),
-            None => None,
         })
         .collect();
 
@@ -208,12 +200,9 @@ pub fn get_files(folder_path: &str) -> Vec<FilesInCompressed> {
 
             let rar_contents = String::from_utf8(new_command.stdout).unwrap();
             let vec_file_list = rar_contents
-                .split("\n")
+                .split('\n')
                 .map(|temp_str| temp_str.to_string());
-            FilesInCompressed::new(
-                rar_file.clone(),
-                vec_file_list.to_owned().collect::<Vec<_>>(),
-            )
+            FilesInCompressed::new(rar_file, vec_file_list.to_owned().collect::<Vec<_>>())
         })
         .collect();
 
@@ -229,9 +218,8 @@ mod tests {
     #[test]
     fn test_get_files() {
         let folder_path_one = "./test_samples";
-        let mut vec_list = vec![
+        let vec_list = vec![
             "test/Billie Eilish_Bad Guy (Snap).wav".to_string(),
-            "test/Full Kit Link.txt".to_string(),
             "test/Gunna_Idk That Bitch (808).wav".to_string(),
             "test/Kanye West_Broken Road (Snare).wav".to_string(),
             "test/Kanye West_Off The Grid (Hi Hat).wav".to_string(),
@@ -240,6 +228,13 @@ mod tests {
             "test/Travis Scott_5% Tint (Rim).wav".to_string(),
             "test/temmmm/Nav_Champion (Kick).wav".to_string(),
         ];
-        //assert_eq!(get_files(folder_path_one).sort(), vec_list.sort());
+        let comp_files = get_files(folder_path_one);
+        let all_files: Vec<String> = comp_files
+            .into_iter()
+            .map(|val| val.file_name_list)
+            .flatten()
+            .collect();
+
+        assert!(vec_list.iter().all(|item| all_files.contains(item)));
     }
 }

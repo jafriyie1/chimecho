@@ -131,8 +131,8 @@ pub fn unzip_files(folder_path: &str) {
     }
 
     // remove MACOSX directory
-    if fs::remove_dir_all("./unzipped/__MACOSX").is_ok() {
-        fs::remove_dir_all("./unzipped/__MACOSX").unwrap();
+    if fs::metadata("./unzipped/__MACOSX/").is_ok() {
+        fs::remove_dir_all("./unzipped/__MACOSX/").unwrap();
         println!("removed MACOSX folder");
     }
 }

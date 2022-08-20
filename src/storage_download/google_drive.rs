@@ -186,7 +186,13 @@ impl DownloadFiles<DriveHub> for GoogleDriveMetadata {
 
         let data_resp = match resp {
             Ok(val) => Some(val),
-            Err(_) => None,
+            Err(e) => {
+                warn!(
+                    "Got no response from {} with error response {}. Setting to None",
+                    &self.url, e
+                );
+                None
+            }
         };
 
         debug!(
@@ -214,6 +220,8 @@ impl DownloadFiles<DriveHub> for GoogleDriveMetadata {
             let new_response = to_bytes(resp.into_body()).await.unwrap();
             file.write_all(&new_response).unwrap();
 
+            info!("Successfully created zip file: {}", &path_str);
+
             let new_file = fs::File::open(&path).unwrap();
             let new_archive = zip::ZipArchive::new(new_file);
             let new_path_str = path_str.clone().replace(".zip", ".rar");
@@ -221,12 +229,17 @@ impl DownloadFiles<DriveHub> for GoogleDriveMetadata {
             if new_archive.is_err() {
                 // the file isn't a zip file but it is a RAR file
                 // deletes the created zip file and creates a RAR file
+                warn!(
+                    "Saved zip file {} is actually a rar file. Will save as rar",
+                    &path_str
+                );
                 fs::remove_file(&path_str).unwrap();
                 let mut rar_file = fs::File::create(&new_path_str).unwrap();
 
                 self.out_path = Some(self.id.clone());
 
                 rar_file.write_all(&new_response).unwrap();
+                info!("Successfully created rar file: {}", &new_path_str);
             }
 
             self.metadata_to_sql(conn);

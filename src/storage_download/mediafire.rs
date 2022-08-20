@@ -69,7 +69,10 @@ impl MediaFireMetadata {
 
         match find_url {
             Some(val) => val.get("href"),
-            None => None,
+            None => {
+                warn!("Mediafire url {} is invalid", &self.url);
+                None
+            }
         }
     }
 }

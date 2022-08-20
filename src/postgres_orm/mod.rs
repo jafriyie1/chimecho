@@ -38,19 +38,11 @@ pub fn create_file_row(
         .expect("Error saving new file source")
 }
 
-pub fn create_individual_file_row(
+pub fn bulk_insert_music_files(
     conn: &PgConnection,
-    compressed_file_name: String,
-    individual_file_name: String,
-    instrument: String,
+    new_music_files: Vec<models::NewMusicFiles>,
 ) -> models::MusicFiles {
     use schema::music_files;
-
-    let new_music_files = models::NewMusicFiles {
-        compressed_file_name: compressed_file_name.as_str(),
-        individual_file_name: individual_file_name.as_str(),
-        instrument: instrument.as_str(),
-    };
 
     diesel::insert_into(music_files::table)
         .values(&new_music_files)

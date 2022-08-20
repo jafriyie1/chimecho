@@ -133,7 +133,7 @@ pub fn unzip_files(folder_path: &str) {
     // remove MACOSX directory
     if fs::metadata("./unzipped/__MACOSX/").is_ok() {
         fs::remove_dir_all("./unzipped/__MACOSX/").unwrap();
-        println!("removed MACOSX folder");
+        info!("removed MACOSX folder from the list of folders that were unzipped");
     }
 }
 
@@ -154,7 +154,6 @@ pub fn get_files(folder_path: &str) -> Vec<FilesInCompressed> {
     for path in file_paths {
         let temp_file_path = &path.unwrap().path().display().to_string();
 
-        //println!("{:?}", temp_path);
         if temp_file_path.contains(".zip") {
             files_in_zip.push(temp_file_path.to_string());
         } else if temp_file_path.contains(".rar") {

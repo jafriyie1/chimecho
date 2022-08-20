@@ -16,8 +16,9 @@ use storage_download::mediafire::MediaFireMetadata;
 use storage_download::{AssocDataForDownload, DownloadFiles, DownloadOptions};
 
 use clap::{Parser, Subcommand};
-
 use itertools::izip;
+#[macro_use]
+extern crate log;
 
 #[derive(Parser, Debug)]
 #[clap(
@@ -75,7 +76,7 @@ fn get_zip_music(
 
     let step_size = step_size.unwrap_or(1);
 
-    println!("yooo here is the file path: {}", &file_path);
+    info!("The file path that was passed from the CLI: {}", &file_path);
 
     let vec_basic_list: RequestSubmissionResponse = serde_json::from_str(&response).unwrap();
     let vec_basic_list = vec_basic_list.items;
@@ -143,22 +144,30 @@ fn get_zip_music(
 
 fn upload_to_gcs(file_path: String, bucket_name: String) -> std::io::Result<()> {
     let get_all_sample_path = download_utils::get_files(&file_path);
-    //println!("Got all of the files {:?}", get_all_sample_path);
+
+    info!(
+        "Got all of the unzipped files from file_path: {}",
+        &file_path
+    );
+
     let postgres_conn = postgres_orm::establish_connection();
 
     for file_obj in get_all_sample_path {
         let temp_file = &file_obj.compressed_file_root;
 
-        for (file_root, all_files, instruments) in
+        let mut music_file_vec = Vec::new();
+        for (compressed_file_name, individual_file_name, instruments) in
             izip!(temp_file, &file_obj.file_name_list, &file_obj.instrument)
         {
-            postgres_orm::create_individual_file_row(
-                &postgres_conn,
-                file_root.to_string(),
-                all_files.to_string(),
-                instruments.to_string(),
-            );
+            let new_music_files = postgres_orm::models::NewMusicFiles {
+                compressed_file_name,
+                individual_file_name,
+                instrument: instruments,
+            };
+            music_file_vec.push(new_music_files);
         }
+
+        postgres_orm::bulk_insert_music_files(&postgres_conn, music_file_vec);
     }
 
     download_utils::unzip_files(&file_path);
@@ -177,6 +186,7 @@ fn upload_to_gcs(file_path: String, bucket_name: String) -> std::io::Result<()> 
 }
 
 fn main() {
+    env_logger::init();
     let args = Cli::parse();
 
     match args.cmd {
@@ -187,11 +197,11 @@ fn main() {
             file_path,
         } => match get_zip_music(q, time_period, step_size, file_path) {
             Ok(_) => {}
-            Err(e) => eprintln!("error with downloading zip files: {}", e),
+            Err(e) => error!("error with downloading zip files: {}", e),
         },
         SubCommand::Upload { file_path, bucket } => match upload_to_gcs(file_path, bucket) {
             Ok(_) => {}
-            Err(e) => eprintln!("error in uploading to gcs: {}", e),
+            Err(e) => error!("error in uploading to gcs: {}", e),
         },
     }
 }

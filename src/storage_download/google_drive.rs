@@ -134,7 +134,6 @@ impl GoogleDriveMetadata {
             }
         };
 
-        println!("{:?}", url);
         let captured = regex_func(use_re.captures(url));
         captured
     }
@@ -190,10 +189,16 @@ impl DownloadFiles<DriveHub> for GoogleDriveMetadata {
             Err(_) => None,
         };
 
+        debug!(
+            "Google drive metadata associated with compressed file: {:?}",
+            &self
+        );
+
         if let Some((resp, _)) = data_resp {
             let path_str = format!("{}/{}.zip", &self.file_path, &self.id);
             let path = Path::new(&path_str);
             let display = path.display();
+
             let mut file = match fs::File::create(&path) {
                 Ok(file) => file,
                 Err(e) => panic!("couldn't open {}: {}", display, e),
@@ -201,27 +206,22 @@ impl DownloadFiles<DriveHub> for GoogleDriveMetadata {
 
             self.out_path = Some(self.id.clone());
 
-            println!("Here is the file path google: {}", &path_str);
-
-            //let mut zip = zip::ZipWriter::new(file);
-
-            //let options = FileOptions::default().compression_method(zip::CompressionMethod::Bzip2);
+            info!(
+                "Name of the compressed file to be saved from google drive: {}",
+                &path_str
+            );
 
             let new_response = to_bytes(resp.into_body()).await.unwrap();
-
-            //zip.start_file(&file_name, options).unwrap();
             file.write_all(&new_response).unwrap();
-            //zip.finish().unwrap();
 
             let new_file = fs::File::open(&path).unwrap();
-
             let new_archive = zip::ZipArchive::new(new_file);
-
             let new_path_str = path_str.clone().replace(".zip", ".rar");
-            if new_archive.is_err() {
-                fs::remove_file(&path_str).unwrap();
-                //let new_file = OpenOptions::new().write(true).open(&new_path_str);
 
+            if new_archive.is_err() {
+                // the file isn't a zip file but it is a RAR file
+                // deletes the created zip file and creates a RAR file
+                fs::remove_file(&path_str).unwrap();
                 let mut rar_file = fs::File::create(&new_path_str).unwrap();
 
                 self.out_path = Some(self.id.clone());

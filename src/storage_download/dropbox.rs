@@ -104,7 +104,10 @@ impl DownloadFiles<String> for DropboxMetadata {
     async fn download(mut self, _hub: Option<&String>, conn: &diesel::PgConnection) {
         let new_file_name = self.file_name.clone().replace('/', "_");
         let full_file_path = format!("{}/{}.zip", &self.file_path, new_file_name);
-        println!("here is the path in dropbox: {}", &full_file_path);
+        info!(
+            "Name of the compressed file to be saved from dropbox: {}",
+            &full_file_path
+        );
         let path = Path::new(&full_file_path);
         let mut file = match fs::File::create(path) {
             Ok(val) => val,

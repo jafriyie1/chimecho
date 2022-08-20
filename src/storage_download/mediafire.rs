@@ -31,7 +31,8 @@ impl MediaFireMetadata {
     #[tokio::main]
     async fn set_html(url: &str) -> String {
         let client = reqwest::Client::builder().build().unwrap();
-        println!("{}", &url);
+        info!("Getting HTML from Mediafire url: {}", &url);
+
         let response = client
             .get(url)
             .header(

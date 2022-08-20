@@ -17,7 +17,7 @@ pub struct FileSource {
     pub time_inserted: SystemTime,
 }
 
-#[derive(Insertable)]
+#[derive(Insertable, Debug)]
 #[table_name = "music_files"]
 pub struct NewMusicFiles<'a> {
     pub compressed_file_name: &'a str,

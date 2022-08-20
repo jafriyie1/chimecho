@@ -5,7 +5,7 @@ use zip;
 
 #[derive(Debug)]
 pub struct FilesInCompressed {
-    pub compressed_file_root: Vec<String>,
+    pub compressed_file_root: String,
     pub file_name_list: Vec<String>,
     pub instrument: Vec<String>,
 }
@@ -14,12 +14,9 @@ impl FilesInCompressed {
     fn new(compressed_file_root: String, file_name_list: Vec<String>) -> FilesInCompressed {
         let filter_vec_list = FilesInCompressed::filter_files(file_name_list);
         let instrument_list = FilesInCompressed::get_instrument(&filter_vec_list);
-        let mut compressed_list = Vec::new();
-        for _ in &filter_vec_list {
-            compressed_list.push(compressed_file_root.clone());
-        }
+
         FilesInCompressed {
-            compressed_file_root: compressed_list,
+            compressed_file_root,
             file_name_list: filter_vec_list,
             instrument: instrument_list,
         }

@@ -125,6 +125,8 @@ fn get_zip_music(
             });
 
     let postgres_conn = postgres_orm::establish_connection();
+    info!("Downloading music samples from various sources....");
+
     for assoc_data in metadata_and_download_vec {
         match assoc_data.download {
             DownloadOptions::GoogleDrive(val) => match val.file_metadata {
@@ -146,7 +148,7 @@ fn upload_to_gcs(file_path: String, bucket_name: String) -> std::io::Result<()> 
     let get_all_sample_path = download_utils::get_files(&file_path);
 
     info!(
-        "Got all of the unzipped files from file_path: {}",
+        "Got all of the uncompressed files from data file path: {}",
         &file_path
     );
 
@@ -155,10 +157,19 @@ fn upload_to_gcs(file_path: String, bucket_name: String) -> std::io::Result<()> 
     for file_obj in get_all_sample_path {
         let temp_file = &file_obj.compressed_file_root;
 
+        // duplicate the file root so that it is the same
+        // size as file list for izip op
+        let mut compressed_list = Vec::new();
+        for _ in &file_obj.file_name_list {
+            compressed_list.push(temp_file);
+        }
+
         let mut music_file_vec = Vec::new();
-        for (compressed_file_name, individual_file_name, instruments) in
-            izip!(temp_file, &file_obj.file_name_list, &file_obj.instrument)
-        {
+        for (compressed_file_name, individual_file_name, instruments) in izip!(
+            compressed_list,
+            &file_obj.file_name_list,
+            &file_obj.instrument
+        ) {
             let new_music_files = postgres_orm::models::NewMusicFiles {
                 compressed_file_name,
                 individual_file_name,
@@ -167,6 +178,10 @@ fn upload_to_gcs(file_path: String, bucket_name: String) -> std::io::Result<()> 
             music_file_vec.push(new_music_files);
         }
 
+        debug!(
+            "Inserting uncompressed files from file root {} into postgres",
+            &temp_file
+        );
         postgres_orm::bulk_insert_music_files(&postgres_conn, music_file_vec);
     }
 

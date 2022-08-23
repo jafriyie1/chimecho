@@ -18,9 +18,9 @@ pub struct MediaFireMetadata {
 }
 
 impl MediaFireMetadata {
-    pub fn new(url: String, file_path: String) -> MediaFireMetadata {
-        let raw_html = MediaFireMetadata::set_html(&url);
-        MediaFireMetadata {
+    pub fn new(url: String, file_path: String) -> Self {
+        let raw_html = Self::set_html(&url);
+        Self {
             url,
             raw_html,
             file_path,

@@ -157,6 +157,7 @@ fn upload_to_gcs(file_path: String, bucket_name: String) -> std::io::Result<()> 
     for file_obj in get_all_sample_path {
         let temp_file = &file_obj.compressed_file_root;
 
+        let mut music_file_vec = Vec::new();
         // duplicate the file root so that it is the same
         // size as file list for izip op
         let mut compressed_list = Vec::new();
@@ -164,7 +165,6 @@ fn upload_to_gcs(file_path: String, bucket_name: String) -> std::io::Result<()> 
             compressed_list.push(temp_file);
         }
 
-        let mut music_file_vec = Vec::new();
         for (compressed_file_name, individual_file_name, instruments) in izip!(
             compressed_list,
             &file_obj.file_name_list,
@@ -179,14 +179,22 @@ fn upload_to_gcs(file_path: String, bucket_name: String) -> std::io::Result<()> 
         }
 
         debug!(
-            "Inserting uncompressed files from file root {} into postgres",
+            "Inserting uncompressed files from file root as a row {} into postgres",
             &temp_file
         );
-        postgres_orm::bulk_insert_music_files(&postgres_conn, music_file_vec);
+
+        debug!(
+            "Here are the music files in the vector: {:?}",
+            &music_file_vec
+        );
+        if !music_file_vec.is_empty() {
+            postgres_orm::bulk_insert_music_files(&postgres_conn, music_file_vec);
+        }
     }
 
     download_utils::unzip_files(&file_path);
     // upload to gcs
+    info!("Uploading uncompressed music sample files to GCS.....");
     let _new_command = std::process::Command::new("gsutil")
         .arg("-m")
         .arg("cp")

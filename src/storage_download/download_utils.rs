@@ -11,11 +11,11 @@ pub struct FilesInCompressed {
 }
 
 impl FilesInCompressed {
-    fn new(compressed_file_root: String, file_name_list: Vec<String>) -> FilesInCompressed {
-        let filter_vec_list = FilesInCompressed::filter_files(file_name_list);
-        let instrument_list = FilesInCompressed::get_instrument(&filter_vec_list);
+    fn new(compressed_file_root: String, file_name_list: Vec<String>) -> Self {
+        let filter_vec_list = Self::filter_files(file_name_list);
+        let instrument_list = Self::get_instrument(&filter_vec_list);
 
-        FilesInCompressed {
+        Self {
             compressed_file_root,
             file_name_list: filter_vec_list,
             instrument: instrument_list,
@@ -173,7 +173,7 @@ pub fn get_files(folder_path: &str) -> Vec<FilesInCompressed> {
 
                 let file_names_to_string: Vec<String> = temp_file_names
                     .into_iter()
-                    .map(|file| file.to_string())
+                    .map(std::string::ToString::to_string)
                     .collect();
                 Some(FilesInCompressed::new(
                     zipped_file.clone(),
@@ -197,8 +197,8 @@ pub fn get_files(folder_path: &str) -> Vec<FilesInCompressed> {
             let rar_contents = String::from_utf8(new_command.stdout).unwrap();
             let vec_file_list = rar_contents
                 .split('\n')
-                .map(|temp_str| temp_str.to_string());
-            FilesInCompressed::new(rar_file, vec_file_list.to_owned().collect::<Vec<_>>())
+                .map(std::string::ToString::to_string);
+            FilesInCompressed::new(rar_file, vec_file_list.clone().collect::<Vec<_>>())
         })
         .collect();
 
@@ -227,8 +227,7 @@ mod tests {
         let comp_files = get_files(folder_path_one);
         let all_files: Vec<String> = comp_files
             .into_iter()
-            .map(|val| val.file_name_list)
-            .flatten()
+            .flat_map(|val| val.file_name_list)
             .collect();
 
         assert!(vec_list.iter().all(|item| all_files.contains(item)));

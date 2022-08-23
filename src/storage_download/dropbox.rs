@@ -73,7 +73,7 @@ pub struct DropboxMetadata {
 }
 
 impl DropboxMetadata {
-    pub fn new(url: String, file_name: String, file_path: String) -> DropboxMetadata {
+    pub fn new(url: String, file_name: String, file_path: String) -> Self {
         // hack for now
         // roux on url adds amp; and %5C
         // on decoding on string from
@@ -86,7 +86,7 @@ impl DropboxMetadata {
 
         let new_file_name = file_name.replace(' ', "_");
 
-        DropboxMetadata {
+        Self {
             url: new_url,
             file_name: new_file_name,
             file_path,

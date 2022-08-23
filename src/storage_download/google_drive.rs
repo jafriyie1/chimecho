@@ -138,9 +138,9 @@ impl GoogleDriveMetadata {
         captured
     }
 
-    pub fn new(url: &str, title: String, file_path: String) -> GoogleDriveMetadata {
-        let file_type = GoogleDriveMetadata::file_or_folder(url);
-        let file_id = GoogleDriveMetadata::get_id(url);
+    pub fn new(url: &str, title: String, file_path: String) -> Self {
+        let file_type = Self::file_or_folder(url);
+        let file_id = Self::get_id(url);
 
         let file_metadata = match file_type {
             "file" => Some(GoogleFileType::GoogleFile(GoogleFile {
@@ -154,7 +154,7 @@ impl GoogleDriveMetadata {
             _ => None,
         };
 
-        GoogleDriveMetadata {
+        Self {
             id: file_id,
             url: url.to_string(),
             file_metadata,

@@ -55,9 +55,7 @@ pub async fn get_google_drive_connector() -> Result<DriveHub, Error> {
         ),
     };
 
-    let secret = yup_oauth2::read_service_account_key(path_to_app_json)
-        .await
-        .unwrap();
+    let secret = yup_oauth2::read_service_account_key(path_to_app_json).await?;
     let auth_result = oauth2::ServiceAccountAuthenticator::builder(secret)
         .build()
         .await;
@@ -96,7 +94,7 @@ impl GoogleDriveMetadata {
         }
     }
 
-    fn get_id(url: &str) -> String {
+    fn get_id(url: &str) -> anyhow::Result<String> {
         lazy_static! {
             static ref RE: Regex = Regex::new(
                 "https://drive.google.com/file/d/([a-zA-z0-9-]+)([/view]+)?.?usp=[a-zA-Z]*"
@@ -135,12 +133,13 @@ impl GoogleDriveMetadata {
         };
 
         let captured = regex_func(use_re.captures(url));
-        captured
+        Ok(captured)
     }
 
     pub fn new(url: &str, title: String, file_path: String) -> Self {
+        //TODO fix unwrap
         let file_type = Self::file_or_folder(url);
-        let file_id = Self::get_id(url);
+        let file_id = Self::get_id(url).unwrap();
 
         let file_metadata = match file_type {
             "file" => Some(GoogleFileType::GoogleFile(GoogleFile {
@@ -165,12 +164,20 @@ impl GoogleDriveMetadata {
 }
 
 impl DownloadFiles<DriveHub> for GoogleDriveMetadata {
-    fn metadata_to_sql(self, conn: &diesel::PgConnection) {
-        postgres_orm::create_file_row(conn, self.url.clone(), self.out_path.unwrap());
+    fn metadata_to_sql(self, conn: &diesel::PgConnection) -> anyhow::Result<()> {
+        //TODO fix unwrap
+        postgres_orm::create_file_row(conn, &self.url, &self.out_path.unwrap())?;
+
+        Ok(())
     }
 
     #[tokio::main]
-    async fn download(mut self, hub: Option<&DriveHub>, conn: &diesel::PgConnection) {
+    async fn download(
+        mut self,
+        hub: Option<&DriveHub>,
+        conn: &diesel::PgConnection,
+    ) -> anyhow::Result<()> {
+        //TODO need to handle here
         let resp = hub
             .unwrap()
             .files()
@@ -217,12 +224,12 @@ impl DownloadFiles<DriveHub> for GoogleDriveMetadata {
                 &path_str
             );
 
-            let new_response = to_bytes(resp.into_body()).await.unwrap();
-            file.write_all(&new_response).unwrap();
+            let new_response = to_bytes(resp.into_body()).await?;
+            file.write_all(&new_response)?;
 
             info!("Successfully created zip file: {}", &path_str);
 
-            let new_file = fs::File::open(&path).unwrap();
+            let new_file = fs::File::open(&path)?;
             let new_archive = zip::ZipArchive::new(new_file);
             let new_path_str = path_str.clone().replace(".zip", ".rar");
 
@@ -233,17 +240,19 @@ impl DownloadFiles<DriveHub> for GoogleDriveMetadata {
                     "Saved zip file {} is actually a rar file. Will save as rar",
                     &path_str
                 );
-                fs::remove_file(&path_str).unwrap();
-                let mut rar_file = fs::File::create(&new_path_str).unwrap();
+                fs::remove_file(&path_str)?;
+                let mut rar_file = fs::File::create(&new_path_str)?;
 
                 self.out_path = Some(self.id.clone());
 
-                rar_file.write_all(&new_response).unwrap();
+                rar_file.write_all(&new_response)?;
                 info!("Successfully created rar file: {}", &new_path_str);
             }
 
-            self.metadata_to_sql(conn);
+            self.metadata_to_sql(conn)?;
         }
+
+        Ok(())
     }
 }
 
@@ -279,19 +288,19 @@ mod tests {
 
         assert_eq!(
             "1Ny62TwY-Rgz4cfQDwcdBHL0vtWJgy6DI",
-            GoogleDriveMetadata::get_id(test_one_url)
+            GoogleDriveMetadata::get_id(test_one_url).unwrap()
         );
         assert_eq!(
             "1-cgL6_YlB8gOVgoLrwCnP19OqHt34WVj",
-            GoogleDriveMetadata::get_id(test_two_url)
+            GoogleDriveMetadata::get_id(test_two_url).unwrap()
         );
         assert_eq!(
             "1K4fCarvyqHrkE08H-b2B-fgaOwMRlSkJ",
-            GoogleDriveMetadata::get_id(test_three_url)
+            GoogleDriveMetadata::get_id(test_three_url).unwrap()
         );
         assert_eq!(
             "1fkzvvlllNowwuZOdlAc0A05p5sZvnsuv",
-            GoogleDriveMetadata::get_id(test_four_url)
+            GoogleDriveMetadata::get_id(test_four_url).unwrap()
         );
     }
 }

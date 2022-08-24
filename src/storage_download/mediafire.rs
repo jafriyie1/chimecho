@@ -19,7 +19,8 @@ pub struct MediaFireMetadata {
 
 impl MediaFireMetadata {
     pub fn new(url: String, file_path: String) -> Self {
-        let raw_html = Self::set_html(&url);
+        //TODO remove unwrap
+        let raw_html = Self::set_html(&url).unwrap();
         Self {
             url,
             raw_html,
@@ -29,8 +30,8 @@ impl MediaFireMetadata {
     }
 
     #[tokio::main]
-    async fn set_html(url: &str) -> String {
-        let client = reqwest::Client::builder().build().unwrap();
+    async fn set_html(url: &str) -> anyhow::Result<String> {
+        let client = reqwest::Client::builder().build()?;
         info!("Getting HTML from Mediafire url: {}", &url);
 
         let response = client
@@ -44,13 +45,11 @@ impl MediaFireMetadata {
             .header("Access-Control-Allow-Methods", "GET")
             .header("Access-Control-Allow-Origin", "*")
             .send()
-            .await
-            .unwrap()
+            .await?
             .text()
-            .await
-            .unwrap();
+            .await?;
 
-        response
+        Ok(response)
     }
 
     fn get_file_name(&self) -> Option<String> {
@@ -78,12 +77,18 @@ impl MediaFireMetadata {
 }
 
 impl DownloadFiles<String> for MediaFireMetadata {
-    fn metadata_to_sql(self, conn: &diesel::PgConnection) {
-        postgres_orm::create_file_row(conn, self.url.clone(), self.out_path.unwrap());
+    fn metadata_to_sql(self, conn: &diesel::PgConnection) -> anyhow::Result<()> {
+        postgres_orm::create_file_row(conn, &self.url, &self.out_path.unwrap())?;
+
+        Ok(())
     }
 
     #[tokio::main]
-    async fn download(mut self, _resp: Option<&String>, conn: &diesel::PgConnection) {
+    async fn download(
+        mut self,
+        _resp: Option<&String>,
+        conn: &diesel::PgConnection,
+    ) -> anyhow::Result<()> {
         let resp_download_url = self.get_download_url();
         let resp_file_name = self.get_file_name();
 
@@ -98,14 +103,9 @@ impl DownloadFiles<String> for MediaFireMetadata {
                 Err(e) => panic!("Couldn't open {}", e),
             };
 
-            let resp_content = reqwest::get(&download_url)
-                .await
-                .unwrap()
-                .bytes()
-                .await
-                .unwrap();
+            let resp_content = reqwest::get(&download_url).await?.bytes().await?;
 
-            file.write_all(&resp_content).unwrap();
+            file.write_all(&resp_content)?;
             self.out_path = Some(
                 original_file_name
                     .clone()
@@ -113,7 +113,8 @@ impl DownloadFiles<String> for MediaFireMetadata {
                     .replace(".rar", ""),
             );
 
-            self.metadata_to_sql(conn);
+            self.metadata_to_sql(conn)?;
         }
+        Ok(())
     }
 }

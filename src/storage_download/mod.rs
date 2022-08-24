@@ -10,9 +10,13 @@ use crate::MediaFireMetadata;
 use diesel::pg::PgConnection;
 
 pub trait DownloadFiles<T> {
-    fn download(self, hub_conn: Option<&T>, conn: &PgConnection);
+    fn download(
+        self,
+        hub_conn: Option<&T>,
+        conn: &PgConnection,
+    ) -> anyhow::Result<(), anyhow::Error>;
 
-    fn metadata_to_sql(self, conn: &PgConnection);
+    fn metadata_to_sql(self, conn: &PgConnection) -> anyhow::Result<(), anyhow::Error>;
 }
 
 #[derive(Debug)]

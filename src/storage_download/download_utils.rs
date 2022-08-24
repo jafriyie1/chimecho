@@ -99,7 +99,7 @@ impl FilesInCompressed {
     }
 }
 
-pub fn unzip_files(folder_path: &str) {
+pub fn unzip_files(folder_path: &str) -> anyhow::Result<()> {
     let file_paths = match fs::read_dir(&folder_path) {
         Ok(val) => val,
         Err(e) => panic!(
@@ -111,7 +111,7 @@ pub fn unzip_files(folder_path: &str) {
     let mut file_list: Vec<String> = Vec::new();
 
     for path in file_paths {
-        let temp_path = path.unwrap().path().display().to_string();
+        let temp_path = path?.path().display().to_string();
         if !temp_path.contains("__MACOSX") {
             file_list.push(temp_path);
         }
@@ -129,12 +129,14 @@ pub fn unzip_files(folder_path: &str) {
 
     // remove MACOSX directory
     if fs::metadata("./unzipped/__MACOSX/").is_ok() {
-        fs::remove_dir_all("./unzipped/__MACOSX/").unwrap();
+        fs::remove_dir_all("./unzipped/__MACOSX/")?;
         info!("removed MACOSX folder from the list of folders that were unzipped");
     }
+
+    Ok(())
 }
 
-pub fn get_files(folder_path: &str) -> Vec<FilesInCompressed> {
+pub fn get_files(folder_path: &str) -> anyhow::Result<Vec<FilesInCompressed>> {
     let base_path = Path::new(folder_path);
 
     let file_paths = match fs::read_dir(base_path) {
@@ -149,12 +151,12 @@ pub fn get_files(folder_path: &str) -> Vec<FilesInCompressed> {
     let mut rar_files: Vec<String> = Vec::new();
 
     for path in file_paths {
-        let temp_file_path = &path.unwrap().path().display().to_string();
+        let temp_file_path = &path?.path().display().to_string();
 
         if temp_file_path.contains(".zip") {
             files_in_zip.push(temp_file_path.to_string());
         } else if temp_file_path.contains(".rar") {
-            rar_files.push(temp_file_path.to_string())
+            rar_files.push(temp_file_path.to_string());
         }
     }
 
@@ -204,7 +206,7 @@ pub fn get_files(folder_path: &str) -> Vec<FilesInCompressed> {
 
     all_zip_files.append(&mut all_rar_files);
 
-    all_zip_files
+    Ok(all_zip_files)
 }
 
 #[cfg(test)]
@@ -224,7 +226,7 @@ mod tests {
             "test/Travis Scott_5% Tint (Rim).wav".to_string(),
             "test/temmmm/Nav_Champion (Kick).wav".to_string(),
         ];
-        let comp_files = get_files(folder_path_one);
+        let comp_files = get_files(folder_path_one).unwrap();
         let all_files: Vec<String> = comp_files
             .into_iter()
             .flat_map(|val| val.file_name_list)

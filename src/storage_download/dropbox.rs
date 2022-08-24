@@ -96,12 +96,18 @@ impl DropboxMetadata {
 }
 
 impl DownloadFiles<String> for DropboxMetadata {
-    fn metadata_to_sql(self, conn: &diesel::PgConnection) {
-        postgres_orm::create_file_row(conn, self.url.clone(), self.out_path.unwrap());
+    fn metadata_to_sql(self, conn: &diesel::PgConnection) -> anyhow::Result<()> {
+        postgres_orm::create_file_row(conn, &self.url, &self.out_path.unwrap())?;
+
+        Ok(())
     }
 
     #[tokio::main]
-    async fn download(mut self, _hub: Option<&String>, conn: &diesel::PgConnection) {
+    async fn download(
+        mut self,
+        _hub: Option<&String>,
+        conn: &diesel::PgConnection,
+    ) -> anyhow::Result<()> {
         let new_file_name = self.file_name.clone().replace('/', "_");
         let full_file_path = format!("{}/{}.zip", &self.file_path, new_file_name);
 
@@ -116,16 +122,13 @@ impl DownloadFiles<String> for DropboxMetadata {
             Err(e) => panic!("Couldn't open the file: {}", e),
         };
 
-        let resp = reqwest::get(&self.url)
-            .await
-            .unwrap()
-            .bytes()
-            .await
-            .unwrap();
+        let resp = reqwest::get(&self.url).await?.bytes().await?;
 
-        file.write_all(&resp).unwrap();
+        file.write_all(&resp)?;
         self.out_path = Some(new_file_name.clone());
 
-        self.metadata_to_sql(conn);
+        self.metadata_to_sql(conn)?;
+
+        Ok(())
     }
 }

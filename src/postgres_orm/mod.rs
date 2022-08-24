@@ -19,33 +19,31 @@ pub fn establish_connection() -> PgConnection {
 
 pub fn create_file_row(
     conn: &PgConnection,
-    url: String,
-    compressed_file_name: String,
-) -> models::FileSource {
+    url: &str,
+    compressed_file_name: &str,
+) -> anyhow::Result<models::FileSource> {
     use schema::file_source;
 
     let timestamp = time::SystemTime::now();
 
     let new_file_source = models::NewFileSource {
-        url: url.as_str(),
-        compressed_file_name: compressed_file_name.as_str(),
+        url,
+        compressed_file_name,
         time_inserted: &timestamp,
     };
 
-    diesel::insert_into(file_source::table)
+    Ok(diesel::insert_into(file_source::table)
         .values(&new_file_source)
-        .get_result(conn)
-        .expect("Error saving new file source")
+        .get_result(conn)?)
 }
 
 pub fn bulk_insert_music_files(
     conn: &PgConnection,
-    new_music_files: Vec<models::NewMusicFiles>,
-) -> models::MusicFiles {
+    new_music_files: &Vec<models::NewMusicFiles>,
+) -> anyhow::Result<models::MusicFiles> {
     use schema::music_files;
 
-    diesel::insert_into(music_files::table)
-        .values(&new_music_files)
-        .get_result(conn)
-        .expect("Error saving music files")
+    Ok(diesel::insert_into(music_files::table)
+        .values(new_music_files)
+        .get_result(conn)?)
 }

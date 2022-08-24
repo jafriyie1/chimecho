@@ -59,7 +59,7 @@ pub struct RequestSubmissionResponse {
 pub async fn get_posts(
     q: Option<String>,
     time_period: Option<String>,
-) -> Result<String, reqwest::Error> {
+) -> anyhow::Result<String, reqwest::Error> {
     let base_url = String::from("https://api.pushshift.io/reddit/search/submission/?subreddit=drumkits&sort=desc&sort_type=created_utc&size=1000");
 
     let base_url = match time_period {
@@ -72,5 +72,5 @@ pub async fn get_posts(
         None => base_url,
     };
 
-    reqwest::get(base_url).await.unwrap().text().await
+    reqwest::get(base_url).await?.text().await
 }

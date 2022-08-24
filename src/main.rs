@@ -15,6 +15,7 @@ use storage_download::google_drive::GoogleFileType;
 use storage_download::mediafire::MediaFireMetadata;
 use storage_download::{AssocDataForDownload, DownloadFiles, DownloadOptions};
 
+use anyhow;
 use clap::{Parser, Subcommand};
 use itertools::izip;
 #[macro_use]
@@ -64,7 +65,7 @@ fn get_zip_music(
     time_period: Option<String>,
     step_size: Option<usize>,
     file_path: String,
-) -> std::io::Result<()> {
+) -> anyhow::Result<()> {
     let posts = reddit::get_posts(q, time_period);
     let response = match posts {
         Ok(val) => val,
@@ -78,7 +79,7 @@ fn get_zip_music(
 
     info!("The file path that was passed from the CLI: {}", &file_path);
 
-    let vec_basic_list: RequestSubmissionResponse = serde_json::from_str(&response).unwrap();
+    let vec_basic_list: RequestSubmissionResponse = serde_json::from_str(&response)?;
     let vec_basic_list = vec_basic_list.items;
     let submission_data_vec = vec_basic_list.iter().step_by(step_size).filter_map(|sub| {
         sub.url.as_ref().map(|url| {
@@ -92,7 +93,7 @@ fn get_zip_music(
         })
     });
 
-    let google_drive_hub = get_google_drive_connector().unwrap();
+    let google_drive_hub = get_google_drive_connector()?;
 
     let metadata_and_download_vec =
         submission_data_vec
@@ -131,21 +132,20 @@ fn get_zip_music(
         match assoc_data.download {
             DownloadOptions::GoogleDrive(val) => match val.file_metadata {
                 Some(GoogleFileType::GoogleFile(_)) => {
-                    val.download(Some(&google_drive_hub), &postgres_conn)
+                    val.download(Some(&google_drive_hub), &postgres_conn)?;
                 }
-                Some(GoogleFileType::GoogleFolder(_)) => (),
                 _ => (),
             },
-            DownloadOptions::Dropbox(val) => val.download(None, &postgres_conn),
-            DownloadOptions::Mediafire(val) => val.download(None, &postgres_conn),
+            DownloadOptions::Dropbox(val) => val.download(None, &postgres_conn)?,
+            DownloadOptions::Mediafire(val) => val.download(None, &postgres_conn)?,
         }
     }
 
     Ok(())
 }
 
-fn upload_to_gcs(file_path: String, bucket_name: String) -> std::io::Result<()> {
-    let get_all_sample_path = download_utils::get_files(&file_path);
+fn upload_to_gcs(file_path: &str, bucket_name: &str) -> anyhow::Result<()> {
+    let get_all_sample_path = download_utils::get_files(file_path)?;
 
     info!(
         "Got all of the uncompressed files from data file path: {}",
@@ -188,11 +188,11 @@ fn upload_to_gcs(file_path: String, bucket_name: String) -> std::io::Result<()> 
             &music_file_vec
         );
         if !music_file_vec.is_empty() {
-            postgres_orm::bulk_insert_music_files(&postgres_conn, music_file_vec);
+            postgres_orm::bulk_insert_music_files(&postgres_conn, &music_file_vec)?;
         }
     }
 
-    download_utils::unzip_files(&file_path);
+    download_utils::unzip_files(&file_path)?;
     // upload to gcs
     info!("Uploading uncompressed music sample files to GCS.....");
     let _new_command = std::process::Command::new("gsutil")
@@ -222,7 +222,7 @@ fn main() {
             Ok(_) => {}
             Err(e) => error!("error with downloading zip files: {}", e),
         },
-        SubCommand::Upload { file_path, bucket } => match upload_to_gcs(file_path, bucket) {
+        SubCommand::Upload { file_path, bucket } => match upload_to_gcs(&file_path, &bucket) {
             Ok(_) => {}
             Err(e) => error!("error in uploading to gcs: {}", e),
         },

@@ -3,7 +3,7 @@ Hi there :D! As a musician and ML Engineer, I have been interested in using AI t
 
 Chimecho is a CLI program written in Rust that pulls music samples that were posted on the [Drumkits](https://www.reddit.com/r/Drumkits/) subreddit. This works by pulling down all of the posts based on a specified query; routing traffic to the link within the post to Dropbox, Google Drive, and Mediafire; and then downloading the files from these storage options. From here, the program will then uncompress the files, store the metadata in a Postgres DB, and then uploads the uncompressed data to a Google Cloud Storage (GCS) bucket.
 
-## How to get started 
+## How to get started https://github.com/rust-lang/rust-clippy
 In order to run chimecho, the following needs to be in place:
 1. You will need to have Rust and cargo installed on your system (TODO: will be creating a binary for all platforms).
 2. You will need to have `7z`, `rar`, `gsutil`, `docker-compose` installed on your system. 
@@ -11,6 +11,11 @@ In order to run chimecho, the following needs to be in place:
 4. You will need to set a `DATABASE_URL` that will be used to connect to the Postgres DB for the metadata store. 
 
 ## How to run the program
+First, navigate to the `docker` subfolder and run `docker-compose up` in a separate terminal. This will start the Postgres DB instance. 
+
+Note: **Please update the password, username, and name of the DB to reflect your `DATABASE_URL` within the `docker/docker-compose.yml` file**. They are currently set to test as placeholders. 
+
+Once the DB is up and running, you may go ahead and run the program.
 There are 2 subcommands for chimecho: `download` and `upload`.
 ### Download
 The download subcommand is used to get the compressed music files and stores it locally on your machine.

@@ -35,12 +35,13 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum SubCommand {
-    // Download data from reddit
+    // Download data from Reddit
     Download {
-        /// Optional query string for Reddit API
+        /// Optional query string for Reddit API. Can get more info here: https://github.com/pushshift/api
         #[clap(short, long)]
         q: Option<String>,
-        /// Optional time period. Example: after=7d
+        /// Optional time period. Specified using UTC or day format. Example: --time-period "after=7d"
+        /// Example: "after=1586604030&before=1605097230"
         #[clap(short, long)]
         time_period: Option<String>,
         /// Number of steps to iterate over posts list
@@ -50,6 +51,7 @@ enum SubCommand {
         #[clap(short, long)]
         file_path: String,
     },
+    // Upload downloaded sample data to GCS
     Upload {
         /// File path folder that contains zip and rar files
         #[clap(short, long)]

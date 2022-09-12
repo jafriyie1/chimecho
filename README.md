@@ -26,9 +26,13 @@ USAGE:
 OPTIONS:
     -f, --file-path <FILE_PATH>        File path folder for the music data to live in
     -h, --help                         Print help information
-    -q, --q <Q>                        Optional query string for Reddit API
+    -q, --q <Q>                        Optional query string for Reddit API. Can get more info here:
+                                       https://github.com/pushshift/api
     -s, --step-size <STEP_SIZE>        Number of steps to iterate over posts list
-    -t, --time-period <TIME_PERIOD>    Optional time period. Example: after=7d
+    -t, --time-period <TIME_PERIOD>    Optional time period. Specified using UTC or day format.
+                                       Example: --time-period "after=7d" Example:
+                                       "after=1586604030&before=1605097230"USAGE:
+    chimecho download [OPTIONS] --file-path <FILE_PATH>
 ```
 
 Example: 

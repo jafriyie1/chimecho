@@ -15,7 +15,8 @@ First, clone this repo. Then navigate to the `docker` subfolder and run `docker-
 
 Note: **Please update the password, username, and name of the DB to reflect your `DATABASE_URL` within the `docker/docker-compose.yml` file**. They are currently set to test as placeholders. 
 
-Once the DB is up and running, you may go ahead and run the program.
+Once the DB is up and running, execute the `create table` statements in the `sql/create_table.sql` script. 
+Once that is done, you may go ahead and run the program.
 There are 2 subcommands for chimecho: `download` and `upload`.
 ### Download
 The download subcommand is used to get the compressed music files and stores it locally on your machine.

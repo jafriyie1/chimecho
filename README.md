@@ -13,7 +13,7 @@ In order to run chimecho, the following needs to be in place:
 ## How to run the program
 First, clone this repo. Then navigate to the `docker` subfolder and run `docker-compose up` in a separate terminal. This will start the Postgres DB instance. 
 
-Note: **Please update the password, username, and name of the DB to reflect your `DATABASE_URL` within the `docker/docker-compose.yml` file**. They are currently set to test as placeholders. 
+Note: **Please update the password, username, path for the volume, and name of the DB to reflect your `DATABASE_URL` within the `docker/docker-compose.yml` file**. They are currently set to test as placeholders. 
 
 Once the DB is up and running, execute the `create table` statements in the `sql/create_tables.sql` script. 
 Once that is done, you may go ahead and run the program.
